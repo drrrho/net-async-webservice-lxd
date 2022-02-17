@@ -1,0 +1,2930 @@
+
+=head1 NAME
+
+Net::Async::WebService::lxd - REST client for lxd Linux containers
+
+=head1 SYNOPSIS
+
+   use IO::Async::Loop;
+   my $loop = IO::Async::Loop->new;
+
+   use Net::Async::WebService::lxd;
+   my $lxd = Net::Async::WebService::lxd->new( loop               => $loop,
+					       endpoint           => 'https://192.168.0.50:8443',
+					       client_cert_file   => "t/client.crt",
+					       client_key_file    => "t/client.key",
+					       server_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
+                                              );
+   $lxd->create_instance(
+	    body => {
+		architecture => 'x86_64',
+		profiles     => [ 'default'  ],
+		name         => 'test1',
+		source       => { 'type' => 'image', fingerprint => '6dc6aa7c8c00' },
+		config       => {},
+	    } )->get;   # wait for it
+   # container is still stopped
+   $lxd->instance_state( name => 'test1',
+            body => {
+                action   => "start",
+		force    => JSON::false,
+		stateful => JSON::false,
+		timeout  => 30,
+	    } )->get;  # wait for it
+
+
+=head1 INTERFACE
+
+=head2 Constructor
+
+@@@@
+@@@@ environemtn endpoint, project ...
+
+# automatically generated from the Swagger spec at https://raw.githubusercontent.com/lxc/lxd/master/doc/rest-api.yaml
+
+=head2 Certificates
+
+=over
+
+=item * B<add_certificate>
+
+Adds a certificate to the trust store.
+In this mode, the `password` property is always ignored.
+
+=over
+
+
+=back
+
+=item * B<add_certificate_untrusted>
+
+Adds a certificate to the trust store as an untrusted user.
+In this mode, the `password` property must be set to the correct value.
+
+The `certificate` field can be omitted in which case the TLS client
+certificate in use for the connection will be retrieved and added to the
+trust store.
+
+The `?public` part of the URL isn't required, it's simply used to
+separate the two behaviors of this endpoint.
+
+=over
+
+
+=back
+
+=item * B<certificate>
+
+Gets a specific certificate entry from the trust store.
+
+Updates the entire certificate configuration.
+
+=over
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+=item * B<certificates>
+
+Returns a list of trusted certificates (URLs).
+
+=over
+
+
+=back
+
+=item * B<certificates_recursion1>
+
+Returns a list of trusted certificates (structs).
+
+=over
+
+
+=back
+
+=item * B<delete_certificate>
+
+Removes the certificate from the trust store.
+
+=over
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+=item * B<modify_certificate>
+
+Updates a subset of the certificate configuration.
+
+=over
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Cluster
+
+=over
+
+=item * B<add_cluster_member>
+
+Requests a join token to add a cluster member.
+
+=over
+
+
+=back
+
+=item * B<cluster>
+
+Gets the current cluster configuration.
+
+Updates the entire cluster configuration.
+
+=over
+
+
+=back
+
+=item * B<cluster_member>
+
+Gets a specific cluster member.
+
+Updates the entire cluster member configuration.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<cluster_members>
+
+Returns a list of cluster members (URLs).
+
+=over
+
+
+=back
+
+=item * B<cluster_members_recursion1>
+
+Returns a list of cluster members (structs).
+
+=over
+
+
+=back
+
+=item * B<clustering_update_cert>
+
+Replaces existing cluster certificate and reloads LXD on each cluster
+member.
+
+=over
+
+
+=back
+
+=item * B<create_cluster_group>
+
+Creates a new cluster group.
+
+=over
+
+
+=back
+
+=item * B<delete_cluster_member>
+
+Removes the member from the cluster.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_cluster_member>
+
+Updates a subset of the cluster member configuration.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<rename_cluster_member>
+
+Renames an existing cluster member.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<restore_cluster_member_state>
+
+Evacuates or restores a cluster member.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Cluster Groups
+
+=over
+
+=item * B<cluster_group>
+
+Gets a specific cluster group.
+
+Updates the entire cluster group configuration.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<cluster_groups>
+
+Returns a list of cluster groups (URLs).
+
+=over
+
+
+=back
+
+=item * B<cluster_groups_recursion1>
+
+Returns a list of cluster groups (structs).
+
+=over
+
+
+=back
+
+=item * B<delete_cluster_group>
+
+Removes the cluster group.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_cluster_group>
+
+Updates the cluster group configuration.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<rename_cluster_group>
+
+Renames an existing cluster group.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Images
+
+=over
+
+=item * B<create_image>
+
+Adds a new image to the image store.
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<create_images_alias>
+
+Creates a new image alias.
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<delete_image>
+
+Removes the image from the image store.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+=item * B<delete_image_alias>
+
+Deletes a specific image alias.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<image>
+
+Gets a specific image.
+
+Updates the entire image definition.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+=item * B<image_alias>
+
+Gets a specific image alias.
+
+Updates the entire image alias configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<image_alias_untrusted>
+
+Gets a specific public image alias.
+This untrusted endpoint only works for aliases pointing to public images.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<image_export>
+
+Download the raw image file(s) from the server.
+If the image is in split format, a multipart http transfer occurs.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+=item * B<image_export_untrusted>
+
+Download the raw image file(s) of a public image from the server.
+If the image is in split format, a multipart http transfer occurs.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<secret>: string, optional
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+=item * B<image_untrusted>
+
+Gets a specific public image.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<secret>: string, optional
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+=item * B<images>
+
+Returns a list of images (URLs).
+
+=over
+
+=item C<filter>: string, optional
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<images_aliases>
+
+Returns a list of image aliases (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<images_aliases_recursion1>
+
+Returns a list of image aliases (structs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<images_recursion1>
+
+Returns a list of images (structs).
+
+=over
+
+=item C<filter>: string, optional
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<images_recursion1_untrusted>
+
+Returns a list of publicly available images (structs).
+
+=over
+
+=item C<filter>: string, optional
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<images_untrusted>
+
+Returns a list of publicly available images (URLs).
+
+=over
+
+=item C<filter>: string, optional
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<initiate_image_upload>
+
+This generates a background operation including a secret one time key
+in its metadata which can be used to fetch this image from an untrusted
+client.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+=item * B<modify_image>
+
+Updates a subset of the image definition.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+=item * B<modify_images_alias>
+
+Updates a subset of the image alias configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<push_image_untrusted>
+
+Pushes the data to the target image server.
+This is meant for LXD to LXD communication where a new image entry is
+prepared on the target server and the source server is provided that URL
+and a secret token to push the image content over.
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<push_images_export>
+
+Gets LXD to connect to a remote server and push the image to it.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+=item * B<rename_images_alias>
+
+Renames an existing image alias.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<update_images_refresh>
+
+This causes LXD to check the image source server for an updated
+version of the image and if available to refresh the local copy with the
+new version.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<fingerprint>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Instances
+
+=over
+
+=item * B<connect_instance_console>
+
+Connects to the console of an instance.
+
+The returned operation metadata will contain two websockets, one for data and one for control.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<create_instance>
+
+Creates a new instance on LXD.
+Depending on the source, this can create an instance from an existing
+local image, remote image, existing local instance or snapshot, remote
+migration stream or backup file.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+
+=back
+
+=item * B<create_instance_backup>
+
+Creates a new backup.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<create_instance_file>
+
+Creates a new file in the instance.
+
+=over
+
+=item C<path>: string, optional
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<create_instance_metadata_template>
+
+Creates a new image template file for the instance.
+
+=over
+
+=item C<path>: string, optional
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<create_instance_snapshot>
+
+Creates a new snapshot.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<delete_instance>
+
+Deletes a specific instance.
+
+This also deletes anything owned by the instance such as snapshots and backups.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<delete_instance_backup>
+
+Deletes the instance backup.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<backup>: string (inside URL)
+
+
+=back
+
+=item * B<delete_instance_console>
+
+Clears the console log buffer.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<delete_instance_files>
+
+Removes the file.
+
+=over
+
+=item C<path>: string, optional
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<delete_instance_log>
+
+Removes the log file.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<filename>: string (inside URL)
+
+
+=back
+
+=item * B<delete_instance_metadata_templates>
+
+Removes the template file.
+
+=over
+
+=item C<path>: string, optional
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<delete_instance_snapshot>
+
+Deletes the instance snapshot.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<snapshot>: string (inside URL)
+
+
+=back
+
+=item * B<execute_in_instance>
+
+Executes a command inside an instance.
+
+The returned operation metadata will contain either 2 or 4 websockets.
+In non-interactive mode, you'll get one websocket for each of stdin, stdout and stderr.
+In interactive mode, a single bi-directional websocket is used for stdin and stdout/stderr.
+
+An additional "control" socket is always added on top which can be used for out of band communication with LXD.
+This allows sending signals and window sizing information through.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance>
+
+Gets a specific instance (basic struct).
+
+Updates the instance configuration or trigger a snapshot restore.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_backup>
+
+Gets a specific instance backup.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<backup>: string (inside URL)
+
+
+=back
+
+=item * B<instance_backup_export>
+
+Download the raw backup file(s) from the server.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<backup>: string (inside URL)
+
+
+=back
+
+=item * B<instance_backups>
+
+Returns a list of instance backups (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_backups_recursion1>
+
+Returns a list of instance backups (structs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_console>
+
+Gets the console log for the instance.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_files>
+
+Gets the file content. If it's a directory, a json list of files will be returned instead.
+
+=over
+
+=item C<path>: string, optional
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_log>
+
+Gets the log file.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<filename>: string (inside URL)
+
+
+=back
+
+=item * B<instance_logs>
+
+Returns a list of log files (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_metadata>
+
+Gets the image metadata for the instance.
+
+Updates the instance image metadata.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_metadata_templates>
+
+If no path specified, returns a list of template file names.
+If a path is specified, returns the file content.
+
+=over
+
+=item C<path>: string, optional
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_recursion1>
+
+Gets a specific instance (full struct).
+
+recursion=1 also includes information about state, snapshots and backups.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_snapshot>
+
+Gets a specific instance snapshot.
+
+Updates the snapshot config.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<snapshot>: string (inside URL)
+
+
+=back
+
+=item * B<instance_snapshots>
+
+Returns a list of instance snapshots (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_snapshots_recursion1>
+
+Returns a list of instance snapshots (structs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instance_state>
+
+Gets the runtime state of the instance.
+
+This is a reasonably expensive call as it causes code to be run
+inside of the instance to retrieve the resource usage and network
+information.
+
+Changes the running state of the instance.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<instances>
+
+Returns a list of instances (URLs).
+
+Changes the running state of all instances.
+
+=over
+
+=item C<all-projects>: boolean, optional
+
+=item C<filter>: string, optional
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<instances_recursion1>
+
+Returns a list of instances (basic structs).
+
+=over
+
+=item C<all-projects>: boolean, optional
+
+=item C<filter>: string, optional
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<instances_recursion2>
+
+Returns a list of instances (full structs).
+
+The main difference between recursion=1 and recursion=2 is that the
+latter also includes state and snapshot information allowing for a
+single API call to return everything needed by most clients.
+
+=over
+
+=item C<all-projects>: boolean, optional
+
+=item C<filter>: string, optional
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<migrate_instance>
+
+Renames, moves an instance between pools or migrates an instance to another server.
+
+The returned operation metadata will vary based on what's requested.
+For rename or move within the same server, this is a simple background operation with progress data.
+For migration, in the push case, this will similarly be a background
+operation with progress data, for the pull case, it will be a websocket
+operation with a number of secrets to be passed to the target server.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<migrate_instance_snapshot>
+
+Renames or migrates an instance snapshot to another server.
+
+The returned operation metadata will vary based on what's requested.
+For rename or move within the same server, this is a simple background operation with progress data.
+For migration, in the push case, this will similarly be a background
+operation with progress data, for the pull case, it will be a websocket
+operation with a number of secrets to be passed to the target server.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<snapshot>: string (inside URL)
+
+
+=back
+
+=item * B<modify_instance>
+
+Updates a subset of the instance configuration
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_instance_metadata>
+
+Updates a subset of the instance image metadata.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_instance_snapshot>
+
+Updates a subset of the snapshot config.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<snapshot>: string (inside URL)
+
+
+=back
+
+=item * B<rename_instance_backup>
+
+Renames an instance backup.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<backup>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Metrics
+
+=over
+
+=item * B<metrics>
+
+Gets metrics of instances.
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+
+=back
+
+=head2 Network ACLs
+
+=over
+
+=item * B<create_network_acl>
+
+Creates a new network ACL.
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<delete_network_acl>
+
+Removes the network ACL.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_network_acl>
+
+Updates a subset of the network ACL configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<network_acl>
+
+Gets a specific network ACL.
+
+Updates the entire network ACL configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<network_acl_log>
+
+Gets a specific network ACL log entries.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<network_acls>
+
+Returns a list of network ACLs (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<network_acls_recursion1>
+
+Returns a list of network ACLs (structs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<rename_network_acl>
+
+Renames an existing network ACL.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Network Forwards
+
+=over
+
+=item * B<create_network_forward>
+
+Creates a new network address forward.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+
+=back
+
+=item * B<delete_network_forward>
+
+Removes the network address forward.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+=item C<listenAddress>: string (inside URL)
+
+
+=back
+
+=item * B<modify_network_forward>
+
+Updates a subset of the network address forward configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+=item C<listenAddress>: string (inside URL)
+
+
+=back
+
+=item * B<network_forward>
+
+Gets a specific network address forward.
+
+Updates the entire network address forward configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+=item C<listenAddress>: string (inside URL)
+
+
+=back
+
+=item * B<network_forward_recursion1>
+
+Returns a list of network address forwards (structs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+
+=back
+
+=item * B<network_forwards>
+
+Returns a list of network address forwards (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Network Peers
+
+=over
+
+=item * B<create_network_peer>
+
+Initiates/creates a new network peering.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+
+=back
+
+=item * B<delete_network_peer>
+
+Removes the network peering.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+=item C<peerName>: string (inside URL)
+
+
+=back
+
+=item * B<modify_network_peer>
+
+Updates a subset of the network peering configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+=item C<peerName>: string (inside URL)
+
+
+=back
+
+=item * B<network_peer>
+
+Gets a specific network peering.
+
+Updates the entire network peering configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+=item C<peerName>: string (inside URL)
+
+
+=back
+
+=item * B<network_peer_recursion1>
+
+Returns a list of network peers (structs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+
+=back
+
+=item * B<network_peers>
+
+Returns a list of network peers (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<networkName>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Network Zones
+
+=over
+
+=item * B<create_network_zone>
+
+Creates a new network zone.
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<create_network_zone_record>
+
+Creates a new network zone record.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<zone>: string (inside URL)
+
+
+=back
+
+=item * B<delete_network_zone>
+
+Removes the network zone.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<delete_network_zone_record>
+
+Removes the network zone record.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<zone>: string (inside URL)
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_network_zone>
+
+Updates a subset of the network zone configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_network_zone_record>
+
+Updates a subset of the network zone record configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<zone>: string (inside URL)
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<network_zone>
+
+Gets a specific network zone.
+
+Updates the entire network zone configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<network_zone_record>
+
+Gets a specific network zone record.
+
+Updates the entire network zone record configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<zone>: string (inside URL)
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<network_zone_records>
+
+Returns a list of network zone records (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<zone>: string (inside URL)
+
+
+=back
+
+=item * B<network_zone_records_recursion1>
+
+Returns a list of network zone records (structs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<zone>: string (inside URL)
+
+
+=back
+
+=item * B<network_zones>
+
+Returns a list of network zones (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<network_zones_recursion1>
+
+Returns a list of network zones (structs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+
+=back
+
+=head2 Networks
+
+=over
+
+=item * B<create_network>
+
+Creates a new network.
+When clustered, most network types require individual POST for each cluster member prior to a global POST.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+
+=back
+
+=item * B<delete_network>
+
+Removes the network.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_network>
+
+Updates a subset of the network configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<network>
+
+Gets a specific network.
+
+Updates the entire network configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<networks>
+
+Returns a list of networks (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<networks_leases>
+
+Returns a list of DHCP leases for the network.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<networks_recursion1>
+
+Returns a list of networks (structs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<networks_state>
+
+Returns the current network state information.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<rename_network>
+
+Renames an existing network.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Operations
+
+=over
+
+=item * B<delete_operation>
+
+Cancels the operation if supported.
+
+=over
+
+=item C<id>: string (inside URL)
+
+
+=back
+
+=item * B<operation>
+
+Gets the operation state.
+
+=over
+
+=item C<id>: string (inside URL)
+
+
+=back
+
+=item * B<operation_wait>
+
+Waits for the operation to reach a final state (or timeout) and retrieve its final state.
+
+=over
+
+=item C<timeout>: integer, optional
+
+=item C<id>: string (inside URL)
+
+
+=back
+
+=item * B<operation_wait_untrusted>
+
+Waits for the operation to reach a final state (or timeout) and retrieve its final state.
+
+When accessed by an untrusted user, the secret token must be provided.
+
+=over
+
+=item C<secret>: string, optional
+
+=item C<timeout>: integer, optional
+
+=item C<id>: string (inside URL)
+
+
+=back
+
+=item * B<operation_websocket>
+
+Connects to an associated websocket stream for the operation.
+This should almost never be done directly by a client, instead it's
+meant for LXD to LXD communication with the client only relaying the
+connection information to the servers.
+
+=over
+
+=item C<secret>: string, optional
+
+=item C<id>: string (inside URL)
+
+
+=back
+
+=item * B<operation_websocket_untrusted>
+
+Connects to an associated websocket stream for the operation.
+This should almost never be done directly by a client, instead it's
+meant for LXD to LXD communication with the client only relaying the
+connection information to the servers.
+
+The untrusted endpoint is used by the target server to connect to the source server.
+Authentication is performed through the secret token.
+
+=over
+
+=item C<secret>: string, optional
+
+=item C<id>: string (inside URL)
+
+
+=back
+
+=item * B<operations>
+
+Returns a dict of operation type to operation list (URLs).
+
+=over
+
+
+=back
+
+=item * B<operations_recursion1>
+
+Returns a list of operations (structs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+
+=back
+
+=head2 Profiles
+
+=over
+
+=item * B<create_profile>
+
+Creates a new profile.
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<delete_profile>
+
+Removes the profile.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_profile>
+
+Updates a subset of the profile configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<profile>
+
+Gets a specific profile.
+
+Updates the entire profile configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<profiles>
+
+Returns a list of profiles (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<profiles_recursion1>
+
+Returns a list of profiles (structs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<rename_profile>
+
+Renames an existing profile.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Projects
+
+=over
+
+=item * B<create_project>
+
+Creates a new project.
+
+=over
+
+
+=back
+
+=item * B<delete_project>
+
+Removes the project.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_project>
+
+Updates a subset of the project configuration.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<project>
+
+Gets a specific project.
+
+Updates the entire project configuration.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<project_state>
+
+Gets a specific project resource consumption information.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<projects>
+
+Returns a list of projects (URLs).
+
+=over
+
+
+=back
+
+=item * B<projects_recursion1>
+
+Returns a list of projects (structs).
+
+=over
+
+
+=back
+
+=item * B<rename_project>
+
+Renames an existing project.
+
+=over
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+
+=back
+
+=head2 Server
+
+=over
+
+=item * B<api>
+
+Returns a list of supported API versions (URLs).
+
+Internal API endpoints are not reported as those aren't versioned and
+should only be used by LXD itself.
+
+=over
+
+
+=back
+
+=item * B<events>
+
+Connects to the event API using websocket.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<type>: string, optional
+
+
+=back
+
+=item * B<modify_server>
+
+Updates a subset of the server configuration.
+
+=over
+
+=item C<target>: string, optional
+
+
+=back
+
+=item * B<resources>
+
+Gets the hardware information profile of the LXD server.
+
+=over
+
+=item C<target>: string, optional
+
+
+=back
+
+=item * B<server>
+
+Shows the full server environment and configuration.
+
+Updates the entire server configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+
+=back
+
+=item * B<server_untrusted>
+
+Shows a small subset of the server environment and configuration
+which is required by untrusted clients to reach a server.
+
+The `?public` part of the URL isn't required, it's simply used to
+separate the two behaviors of this endpoint.
+
+=over
+
+
+=back
+
+
+=back
+
+=head2 Storage
+
+=over
+
+=item * B<create_storage_pool>
+
+Creates a new storage pool.
+When clustered, storage pools require individual POST for each cluster member prior to a global POST.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+
+=back
+
+=item * B<create_storage_pool_volume>
+
+Creates a new storage volume.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<create_storage_pool_volumes_backup>
+
+Creates a new storage volume backup.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<create_storage_pool_volumes_snapshot>
+
+Creates a new storage volume snapshot.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<create_storage_pool_volumes_type>
+
+Creates a new storage volume (type specific endpoint).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+
+=back
+
+=item * B<delete_storage_pool_volume_type>
+
+Removes the storage volume.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<delete_storage_pool_volumes_type_backup>
+
+Deletes a new storage volume backup.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+=item C<backup>: string (inside URL)
+
+
+=back
+
+=item * B<delete_storage_pool_volumes_type_snapshot>
+
+Deletes a new storage volume snapshot.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+=item C<snapshot>: string (inside URL)
+
+
+=back
+
+=item * B<delete_storage_pools>
+
+Removes the storage pool.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<migrate_storage_pool_volume_type>
+
+Renames, moves a storage volume between pools or migrates an instance to another server.
+
+The returned operation metadata will vary based on what's requested.
+For rename or move within the same server, this is a simple background operation with progress data.
+For migration, in the push case, this will similarly be a background
+operation with progress data, for the pull case, it will be a websocket
+operation with a number of secrets to be passed to the target server.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<modify_storage_pool>
+
+Updates a subset of the storage pool configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<modify_storage_pool_volume_type>
+
+Updates a subset of the storage volume configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<modify_storage_pool_volumes_type_snapshot>
+
+Updates a subset of the storage volume snapshot configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+=item C<snapshot>: string (inside URL)
+
+
+=back
+
+=item * B<rename_storage_pool_volumes_type_backup>
+
+Renames a storage volume backup.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+=item C<backup>: string (inside URL)
+
+
+=back
+
+=item * B<rename_storage_pool_volumes_type_snapshot>
+
+Renames a storage volume snapshot.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+=item C<snapshot>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool>
+
+Gets a specific storage pool.
+
+Updates the entire storage pool configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_resources>
+
+Gets the usage information for the storage pool.
+
+=over
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volume_type>
+
+Gets a specific storage volume.
+
+Updates the entire storage volume configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volume_type_state>
+
+Gets a specific storage volume state (usage data).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes>
+
+Returns a list of storage volumes (URLs).
+
+=over
+
+=item C<filter>: string, optional
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes_recursion1>
+
+Returns a list of storage volumes (structs).
+
+=over
+
+=item C<filter>: string, optional
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes_type>
+
+Returns a list of storage volumes (URLs) (type specific endpoint).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes_type_backup>
+
+Gets a specific storage volume backup.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+=item C<backup>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes_type_backup_export>
+
+Download the raw backup file from the server.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+=item C<backup>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes_type_backups>
+
+Returns a list of storage volume backups (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes_type_backups_recursion1>
+
+Returns a list of storage volume backups (structs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes_type_recursion1>
+
+Returns a list of storage volumes (structs) (type specific endpoint).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes_type_snapshot>
+
+Gets a specific storage volume snapshot.
+
+Updates the entire storage volume snapshot configuration.
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+=item C<snapshot>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes_type_snapshots>
+
+Returns a list of storage volume snapshots (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pool_volumes_type_snapshots_recursion1>
+
+Returns a list of storage volume snapshots (structs).
+
+=over
+
+=item C<project>: string, optional
+
+=item C<target>: string, optional
+
+=item C<name>: string (inside URL)
+
+=item C<type>: string (inside URL)
+
+=item C<volume>: string (inside URL)
+
+
+=back
+
+=item * B<storage_pools>
+
+Returns a list of storage pools (URLs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<storage_pools_recursion1>
+
+Returns a list of storage pools (structs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+
+=back
+
+=head2 Warnings
+
+=over
+
+=item * B<delete_warning>
+
+Removes the warning.
+
+=over
+
+=item C<uuid>: string (inside URL)
+
+
+=back
+
+=item * B<modify_warning>
+
+Updates a subset of the warning status.
+
+=over
+
+=item C<uuid>: string (inside URL)
+
+
+=back
+
+=item * B<warning>
+
+Gets a specific warning.
+
+Updates the warning status.
+
+=over
+
+=item C<uuid>: string (inside URL)
+
+
+=back
+
+=item * B<warnings>
+
+Returns a list of warnings.
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+=item * B<warnings_recursion1>
+
+Returns a list of warnings (structs).
+
+=over
+
+=item C<project>: string, optional
+
+
+=back
+
+
+=back
+
+
+
+=head1 AUTHOR
+
+Robert Barta, C<< <rho at devc.at> >>
+
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-net-async-webservice-lxd at rt.cpan.org>, or through
+the web interface at L<https://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-Async-WebService-lxd>.  I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2022 Robert Barta.
+
+This program is free software; you can redistribute it and/or modify it
+under the terms of the the Artistic License (2.0). You may obtain a
+copy of the full license at:
+
+L<http://www.perlfoundation.org/artistic_license_2_0>
+
+Any use, modification, and distribution of the Standard or Modified
+Versions is governed by this Artistic License. By using, modifying or
+distributing the Package, you accept this license. Do not use, modify,
+or distribute the Package, if you do not accept this license.
+
+If your Modified Version has been derived from a Modified Version made
+by someone other than you, you are nevertheless required to ensure that
+your Modified Version complies with the requirements of this license.
+
+This license does not grant you the right to use any trademark, service
+mark, tradename, or logo of the Copyright Holder.
+
+This license includes the non-exclusive, worldwide, free-of-charge
+patent license to make, have made, use, offer to sell, sell, import and
+otherwise transfer the Package with respect to any patent claims
+licensable by the Copyright Holder that are necessarily infringed by the
+Package. If you institute patent litigation (including a cross-claim or
+counterclaim) against any party alleging that the Package constitutes
+direct or contributory patent infringement, then this Artistic License
+to you shall terminate on the date that such litigation is filed.
+
+Disclaimer of Warranty: THE PACKAGE IS PROVIDED BY THE COPYRIGHT HOLDER
+AND CONTRIBUTORS "AS IS' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES.
+THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, OR NON-INFRINGEMENT ARE DISCLAIMED TO THE EXTENT PERMITTED BY
+YOUR LOCAL LAW. UNLESS REQUIRED BY LAW, NO COPYRIGHT HOLDER OR
+CONTRIBUTOR WILL BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, OR
+CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THE PACKAGE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
