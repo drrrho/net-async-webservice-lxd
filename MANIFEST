@@ -3,7 +3,7 @@ Changes
 lib/Net/Async/WebService/lxd.pm
 lib/Net/Async/WebService/lxd.pod
 MANIFEST			This list of files
-README
+README.md
 t/manifest.t
 t/01_projects.t
 t/02_instances.t

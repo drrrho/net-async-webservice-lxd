@@ -4,11 +4,39 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 
 # SYNOPSIS
 
-@@@@
+    use IO::Async::Loop;
+    my $loop = IO::Async::Loop->new;
+
+    use Net::Async::WebService::lxd;
+    my $lxd = Net::Async::WebService::lxd->new( loop               => $loop,
+                                                endpoint           => 'https://192.168.0.50:8443',
+                                                client_cert_file   => "t/client.crt",
+                                                client_key_file    => "t/client.key",
+                                                server_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
+                                               );
+    $lxd->create_instance(
+             body => {
+                 architecture => 'x86_64',
+                 profiles     => [ 'default'  ],
+                 name         => 'test1',
+                 source       => { 'type' => 'image', fingerprint => '6dc6aa7c8c00' },
+                 config       => {},
+             } )->get;   # wait for it
+    # container is still stopped
+    $lxd->instance_state( name => 'test1',
+             body => {
+                 action   => "start",
+                 force    => JSON::false,
+                 stateful => JSON::false,
+                 timeout  => 30,
+             } )->get;  # wait for it
 
 # INTERFACE
 
 ## Constructor
+
+@@@@
+@@@@ environemtn endpoint, project ...
 
 \# automatically generated from the Swagger spec at https://raw.githubusercontent.com/lxc/lxd/master/doc/rest-api.yaml
 
@@ -17,7 +45,7 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 - **add\_certificate**
 
     Adds a certificate to the trust store.
-    In this mode, the \`password\` property is always ignored. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/certificates/certificates\_post> \]
+    In this mode, the \`password\` property is always ignored.
 
 - **add\_certificate\_untrusted**
 
@@ -29,216 +57,248 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
     trust store.
 
     The \`?public\` part of the URL isn't required, it's simply used to
-    separate the two behaviors of this endpoint. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/certificates/certificates\_post\_untrusted> \]
+    separate the two behaviors of this endpoint.
 
 - **certificate**
 
-    Gets a specific certificate entry from the trust store. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/certificates/certificate\_get> \]
+    Gets a specific certificate entry from the trust store.
 
-    Updates the entire certificate configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/certificates/certificate\_put> \]
+    Updates the entire certificate configuration.
+
+    - `fingerprint`: string (inside URL)
 
 - **certificates**
 
-    Returns a list of trusted certificates (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/certificates/certificates\_get> \]
+    Returns a list of trusted certificates (URLs).
 
 - **certificates\_recursion1**
 
-    Returns a list of trusted certificates (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/certificates/certificates\_get\_recursion1> \]
+    Returns a list of trusted certificates (structs).
 
 - **delete\_certificate**
 
-    Removes the certificate from the trust store. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/certificates/certificate\_delete> \]
+    Removes the certificate from the trust store.
+
+    - `fingerprint`: string (inside URL)
 
 - **modify\_certificate**
 
-    Updates a subset of the certificate configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/certificates/certificate\_patch> \]
+    Updates a subset of the certificate configuration.
+
+    - `fingerprint`: string (inside URL)
 
 ## Cluster
 
 - **add\_cluster\_member**
 
-    Requests a join token to add a cluster member. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_members\_post> \]
+    Requests a join token to add a cluster member.
 
 - **cluster**
 
-    Gets the current cluster configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_get> \]
+    Gets the current cluster configuration.
 
-    Updates the entire cluster configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_put> \]
+    Updates the entire cluster configuration.
 
 - **cluster\_member**
 
-    Gets a specific cluster member. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_member\_get> \]
+    Gets a specific cluster member.
 
-    Updates the entire cluster member configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_member\_put> \]
+    Updates the entire cluster member configuration.
+
+    - `name`: string (inside URL)
 
 - **cluster\_members**
 
-    Returns a list of cluster members (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_members\_get> \]
+    Returns a list of cluster members (URLs).
 
 - **cluster\_members\_recursion1**
 
-    Returns a list of cluster members (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_members\_get\_recursion1> \]
+    Returns a list of cluster members (structs).
 
 - **clustering\_update\_cert**
 
     Replaces existing cluster certificate and reloads LXD on each cluster
-    member. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/clustering\_update\_cert> \]
+    member.
 
 - **create\_cluster\_group**
 
-    Creates a new cluster group. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_groups\_post> \]
+    Creates a new cluster group.
 
 - **delete\_cluster\_member**
 
-    Removes the member from the cluster. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_member\_delete> \]
+    Removes the member from the cluster.
+
+    - `name`: string (inside URL)
 
 - **modify\_cluster\_member**
 
-    Updates a subset of the cluster member configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_member\_patch> \]
+    Updates a subset of the cluster member configuration.
+
+    - `name`: string (inside URL)
 
 - **rename\_cluster\_member**
 
-    Renames an existing cluster member. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_member\_post> \]
+    Renames an existing cluster member.
+
+    - `name`: string (inside URL)
 
 - **restore\_cluster\_member\_state**
 
-    Evacuates or restores a cluster member. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster/cluster\_member\_state\_post> \]
+    Evacuates or restores a cluster member.
+
+    - `name`: string (inside URL)
 
 ## Cluster Groups
 
 - **cluster\_group**
 
-    Gets a specific cluster group. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster-groups/cluster\_group\_get> \]
+    Gets a specific cluster group.
 
-    Updates the entire cluster group configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster-groups/cluster\_group\_put> \]
+    Updates the entire cluster group configuration.
+
+    - `name`: string (inside URL)
 
 - **cluster\_groups**
 
-    Returns a list of cluster groups (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster-groups/cluster\_groups\_get> \]
+    Returns a list of cluster groups (URLs).
 
 - **cluster\_groups\_recursion1**
 
-    Returns a list of cluster groups (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster-groups/cluster\_groups\_get\_recursion1> \]
+    Returns a list of cluster groups (structs).
 
 - **delete\_cluster\_group**
 
-    Removes the cluster group. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster-groups/cluster\_group\_delete> \]
+    Removes the cluster group.
+
+    - `name`: string (inside URL)
 
 - **modify\_cluster\_group**
 
-    Updates the cluster group configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster-groups/cluster\_group\_patch> \]
+    Updates the cluster group configuration.
+
+    - `name`: string (inside URL)
 
 - **rename\_cluster\_group**
 
-    Renames an existing cluster group. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/cluster-groups/cluster\_group\_post> \]
+    Renames an existing cluster group.
+
+    - `name`: string (inside URL)
 
 ## Images
 
 - **create\_image**
 
-    Adds a new image to the image store. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_post> \]
+    Adds a new image to the image store.
 
     - `project`: string, optional
 
 - **create\_images\_alias**
 
-    Creates a new image alias. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_aliases\_post> \]
+    Creates a new image alias.
 
     - `project`: string, optional
 
 - **delete\_image**
 
-    Removes the image from the image store. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/image\_delete> \]
+    Removes the image from the image store.
 
     - `project`: string, optional
+    - `fingerprint`: string (inside URL)
 
 - **delete\_image\_alias**
 
-    Deletes a specific image alias. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/image\_alias\_delete> \]
+    Deletes a specific image alias.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **image**
 
-    Gets a specific image. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/image\_get> \]
+    Gets a specific image.
 
-    Updates the entire image definition. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/image\_put> \]
+    Updates the entire image definition.
 
     - `project`: string, optional
+    - `fingerprint`: string (inside URL)
 
 - **image\_alias**
 
-    Gets a specific image alias. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/image\_alias\_get> \]
+    Gets a specific image alias.
 
-    Updates the entire image alias configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_aliases\_put> \]
+    Updates the entire image alias configuration.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **image\_alias\_untrusted**
 
     Gets a specific public image alias.
-    This untrusted endpoint only works for aliases pointing to public images. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/image\_alias\_get\_untrusted> \]
+    This untrusted endpoint only works for aliases pointing to public images.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **image\_export**
 
     Download the raw image file(s) from the server.
-    If the image is in split format, a multipart http transfer occurs. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/image\_export\_get> \]
+    If the image is in split format, a multipart http transfer occurs.
 
     - `project`: string, optional
+    - `fingerprint`: string (inside URL)
 
 - **image\_export\_untrusted**
 
     Download the raw image file(s) of a public image from the server.
-    If the image is in split format, a multipart http transfer occurs. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/image\_export\_get\_untrusted> \]
+    If the image is in split format, a multipart http transfer occurs.
 
     - `project`: string, optional
     - `secret`: string, optional
+    - `fingerprint`: string (inside URL)
 
 - **image\_untrusted**
 
-    Gets a specific public image. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/image\_get\_untrusted> \]
+    Gets a specific public image.
 
     - `project`: string, optional
     - `secret`: string, optional
+    - `fingerprint`: string (inside URL)
 
 - **images**
 
-    Returns a list of images (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_get> \]
+    Returns a list of images (URLs).
 
     - `filter`: string, optional
     - `project`: string, optional
 
 - **images\_aliases**
 
-    Returns a list of image aliases (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_aliases\_get> \]
+    Returns a list of image aliases (URLs).
 
     - `project`: string, optional
 
 - **images\_aliases\_recursion1**
 
-    Returns a list of image aliases (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_aliases\_get\_recursion1> \]
+    Returns a list of image aliases (structs).
 
     - `project`: string, optional
 
 - **images\_recursion1**
 
-    Returns a list of images (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_get\_recursion1> \]
+    Returns a list of images (structs).
 
     - `filter`: string, optional
     - `project`: string, optional
 
 - **images\_recursion1\_untrusted**
 
-    Returns a list of publicly available images (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_get\_recursion1\_untrusted> \]
+    Returns a list of publicly available images (structs).
 
     - `filter`: string, optional
     - `project`: string, optional
 
 - **images\_untrusted**
 
-    Returns a list of publicly available images (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_get\_untrusted> \]
+    Returns a list of publicly available images (URLs).
 
     - `filter`: string, optional
     - `project`: string, optional
@@ -247,50 +307,56 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 
     This generates a background operation including a secret one time key
     in its metadata which can be used to fetch this image from an untrusted
-    client. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_secret\_post> \]
+    client.
 
     - `project`: string, optional
+    - `fingerprint`: string (inside URL)
 
 - **modify\_image**
 
-    Updates a subset of the image definition. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/image\_patch> \]
+    Updates a subset of the image definition.
 
     - `project`: string, optional
+    - `fingerprint`: string (inside URL)
 
 - **modify\_images\_alias**
 
-    Updates a subset of the image alias configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_alias\_patch> \]
+    Updates a subset of the image alias configuration.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **push\_image\_untrusted**
 
     Pushes the data to the target image server.
     This is meant for LXD to LXD communication where a new image entry is
     prepared on the target server and the source server is provided that URL
-    and a secret token to push the image content over. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_post\_untrusted> \]
+    and a secret token to push the image content over.
 
     - `project`: string, optional
 
 - **push\_images\_export**
 
-    Gets LXD to connect to a remote server and push the image to it. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_export\_post> \]
+    Gets LXD to connect to a remote server and push the image to it.
 
     - `project`: string, optional
+    - `fingerprint`: string (inside URL)
 
 - **rename\_images\_alias**
 
-    Renames an existing image alias. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_alias\_post> \]
+    Renames an existing image alias.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **update\_images\_refresh**
 
     This causes LXD to check the image source server for an updated
     version of the image and if available to refresh the local copy with the
-    new version. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/images/images\_refresh\_post> \]
+    new version.
 
     - `project`: string, optional
+    - `fingerprint`: string (inside URL)
 
 ## Instances
 
@@ -298,91 +364,106 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 
     Connects to the console of an instance.
 
-    The returned operation metadata will contain two websockets, one for data and one for control. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_console\_post> \]
+    The returned operation metadata will contain two websockets, one for data and one for control.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **create\_instance**
 
     Creates a new instance on LXD.
     Depending on the source, this can create an instance from an existing
     local image, remote image, existing local instance or snapshot, remote
-    migration stream or backup file. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instances\_post> \]
+    migration stream or backup file.
 
     - `project`: string, optional
     - `target`: string, optional
 
 - **create\_instance\_backup**
 
-    Creates a new backup. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_backups\_post> \]
+    Creates a new backup.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **create\_instance\_file**
 
-    Creates a new file in the instance. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_files\_post> \]
+    Creates a new file in the instance.
 
     - `path`: string, optional
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **create\_instance\_metadata\_template**
 
-    Creates a new image template file for the instance. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_metadata\_templates\_post> \]
+    Creates a new image template file for the instance.
 
     - `path`: string, optional
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **create\_instance\_snapshot**
 
-    Creates a new snapshot. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_snapshots\_post> \]
+    Creates a new snapshot.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **delete\_instance**
 
     Deletes a specific instance.
 
-    This also deletes anything owned by the instance such as snapshots and backups. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_delete> \]
+    This also deletes anything owned by the instance such as snapshots and backups.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **delete\_instance\_backup**
 
-    Deletes the instance backup. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_backup\_delete> \]
+    Deletes the instance backup.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
+    - `backup`: string (inside URL)
 
 - **delete\_instance\_console**
 
-    Clears the console log buffer. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_console\_delete> \]
+    Clears the console log buffer.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **delete\_instance\_files**
 
-    Removes the file. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_files\_delete> \]
+    Removes the file.
 
     - `path`: string, optional
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **delete\_instance\_log**
 
-    Removes the log file. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_log\_delete> \]
+    Removes the log file.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
+    - `filename`: string (inside URL)
 
 - **delete\_instance\_metadata\_templates**
 
-    Removes the template file. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_metadata\_templates\_delete> \]
+    Removes the template file.
 
     - `path`: string, optional
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **delete\_instance\_snapshot**
 
-    Deletes the instance snapshot. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_snapshot\_delete> \]
+    Deletes the instance snapshot.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
+    - `snapshot`: string (inside URL)
 
 - **execute\_in\_instance**
 
@@ -393,110 +474,130 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
     In interactive mode, a single bi-directional websocket is used for stdin and stdout/stderr.
 
     An additional "control" socket is always added on top which can be used for out of band communication with LXD.
-    This allows sending signals and window sizing information through. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_exec\_post> \]
+    This allows sending signals and window sizing information through.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance**
 
-    Gets a specific instance (basic struct). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_get> \]
+    Gets a specific instance (basic struct).
 
-    Updates the instance configuration or trigger a snapshot restore. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_put> \]
+    Updates the instance configuration or trigger a snapshot restore.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_backup**
 
-    Gets a specific instance backup. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_backup\_get> \]
+    Gets a specific instance backup.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
+    - `backup`: string (inside URL)
 
 - **instance\_backup\_export**
 
-    Download the raw backup file(s) from the server. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_backup\_export> \]
+    Download the raw backup file(s) from the server.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
+    - `backup`: string (inside URL)
 
 - **instance\_backups**
 
-    Returns a list of instance backups (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_backups\_get> \]
+    Returns a list of instance backups (URLs).
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_backups\_recursion1**
 
-    Returns a list of instance backups (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_backups\_get\_recursion1> \]
+    Returns a list of instance backups (structs).
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_console**
 
-    Gets the console log for the instance. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_console\_get> \]
+    Gets the console log for the instance.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_files**
 
-    Gets the file content. If it's a directory, a json list of files will be returned instead. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_files\_get> \]
+    Gets the file content. If it's a directory, a json list of files will be returned instead.
 
     - `path`: string, optional
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_log**
 
-    Gets the log file. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_log\_get> \]
+    Gets the log file.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
+    - `filename`: string (inside URL)
 
 - **instance\_logs**
 
-    Returns a list of log files (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_logs\_get> \]
+    Returns a list of log files (URLs).
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_metadata**
 
-    Gets the image metadata for the instance. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_metadata\_get> \]
+    Gets the image metadata for the instance.
 
-    Updates the instance image metadata. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_metadata\_put> \]
+    Updates the instance image metadata.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_metadata\_templates**
 
     If no path specified, returns a list of template file names.
-    If a path is specified, returns the file content. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_metadata\_templates\_get> \]
+    If a path is specified, returns the file content.
 
     - `path`: string, optional
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_recursion1**
 
     Gets a specific instance (full struct).
 
-    recursion=1 also includes information about state, snapshots and backups. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_get\_recursion1> \]
+    recursion=1 also includes information about state, snapshots and backups.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_snapshot**
 
-    Gets a specific instance snapshot. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_snapshot\_get> \]
+    Gets a specific instance snapshot.
 
-    Updates the snapshot config. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_snapshot\_put> \]
+    Updates the snapshot config.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
+    - `snapshot`: string (inside URL)
 
 - **instance\_snapshots**
 
-    Returns a list of instance snapshots (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_snapshots\_get> \]
+    Returns a list of instance snapshots (URLs).
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_snapshots\_recursion1**
 
-    Returns a list of instance snapshots (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_snapshots\_get\_recursion1> \]
+    Returns a list of instance snapshots (structs).
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instance\_state**
 
@@ -504,17 +605,18 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 
     This is a reasonably expensive call as it causes code to be run
     inside of the instance to retrieve the resource usage and network
-    information. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_state\_get> \]
+    information.
 
-    Changes the running state of the instance. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_state\_put> \]
+    Changes the running state of the instance.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **instances**
 
-    Returns a list of instances (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instances\_get> \]
+    Returns a list of instances (URLs).
 
-    Changes the running state of all instances. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instances\_put> \]
+    Changes the running state of all instances.
 
     - `all-projects`: boolean, optional
     - `filter`: string, optional
@@ -522,7 +624,7 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 
 - **instances\_recursion1**
 
-    Returns a list of instances (basic structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instances\_get\_recursion1> \]
+    Returns a list of instances (basic structs).
 
     - `all-projects`: boolean, optional
     - `filter`: string, optional
@@ -534,7 +636,7 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 
     The main difference between recursion=1 and recursion=2 is that the
     latter also includes state and snapshot information allowing for a
-    single API call to return everything needed by most clients. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instances\_get\_recursion2> \]
+    single API call to return everything needed by most clients.
 
     - `all-projects`: boolean, optional
     - `filter`: string, optional
@@ -548,9 +650,10 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
     For rename or move within the same server, this is a simple background operation with progress data.
     For migration, in the push case, this will similarly be a background
     operation with progress data, for the pull case, it will be a websocket
-    operation with a number of secrets to be passed to the target server. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_post> \]
+    operation with a number of secrets to be passed to the target server.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **migrate\_instance\_snapshot**
 
@@ -560,39 +663,47 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
     For rename or move within the same server, this is a simple background operation with progress data.
     For migration, in the push case, this will similarly be a background
     operation with progress data, for the pull case, it will be a websocket
-    operation with a number of secrets to be passed to the target server. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_snapshot\_post> \]
+    operation with a number of secrets to be passed to the target server.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
+    - `snapshot`: string (inside URL)
 
 - **modify\_instance**
 
-    Updates a subset of the instance configuration \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_patch> \]
+    Updates a subset of the instance configuration
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **modify\_instance\_metadata**
 
-    Updates a subset of the instance image metadata. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_metadata\_patch> \]
+    Updates a subset of the instance image metadata.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **modify\_instance\_snapshot**
 
-    Updates a subset of the snapshot config. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_snapshot\_patch> \]
+    Updates a subset of the snapshot config.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
+    - `snapshot`: string (inside URL)
 
 - **rename\_instance\_backup**
 
-    Renames an instance backup. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/instances/instance\_backup\_post> \]
+    Renames an instance backup.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
+    - `backup`: string (inside URL)
 
 ## Metrics
 
 - **metrics**
 
-    Gets metrics of instances. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/metrics/metrics\_get> \]
+    Gets metrics of instances.
 
     - `project`: string, optional
 
@@ -600,209 +711,244 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 
 - **create\_network\_acl**
 
-    Creates a new network ACL. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-acls/network\_acls\_post> \]
+    Creates a new network ACL.
 
     - `project`: string, optional
 
 - **delete\_network\_acl**
 
-    Removes the network ACL. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-acls/network\_acl\_delete> \]
+    Removes the network ACL.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **modify\_network\_acl**
 
-    Updates a subset of the network ACL configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-acls/network\_acl\_patch> \]
+    Updates a subset of the network ACL configuration.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **network\_acl**
 
-    Gets a specific network ACL. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-acls/network\_acl\_get> \]
+    Gets a specific network ACL.
 
-    Updates the entire network ACL configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-acls/network\_acl\_put> \]
+    Updates the entire network ACL configuration.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **network\_acl\_log**
 
-    Gets a specific network ACL log entries. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-acls/network\_acl\_log\_get> \]
+    Gets a specific network ACL log entries.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **network\_acls**
 
-    Returns a list of network ACLs (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-acls/network\_acls\_get> \]
+    Returns a list of network ACLs (URLs).
 
     - `project`: string, optional
 
 - **network\_acls\_recursion1**
 
-    Returns a list of network ACLs (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-acls/network\_acls\_get\_recursion1> \]
+    Returns a list of network ACLs (structs).
 
     - `project`: string, optional
 
 - **rename\_network\_acl**
 
-    Renames an existing network ACL. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-acls/network\_acl\_post> \]
+    Renames an existing network ACL.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 ## Network Forwards
 
 - **create\_network\_forward**
 
-    Creates a new network address forward. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-forwards/network\_forwards\_post> \]
+    Creates a new network address forward.
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
 
 - **delete\_network\_forward**
 
-    Removes the network address forward. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-forwards/network\_forward\_delete> \]
+    Removes the network address forward.
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
+    - `listenAddress`: string (inside URL)
 
 - **modify\_network\_forward**
 
-    Updates a subset of the network address forward configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-forwards/network\_forward\_patch> \]
+    Updates a subset of the network address forward configuration.
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
+    - `listenAddress`: string (inside URL)
 
 - **network\_forward**
 
-    Gets a specific network address forward. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-forwards/network\_forward\_get> \]
+    Gets a specific network address forward.
 
-    Updates the entire network address forward configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-forwards/network\_forward\_put> \]
+    Updates the entire network address forward configuration.
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
+    - `listenAddress`: string (inside URL)
 
 - **network\_forward\_recursion1**
 
-    Returns a list of network address forwards (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-forwards/network\_forward\_get\_recursion1> \]
+    Returns a list of network address forwards (structs).
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
 
 - **network\_forwards**
 
-    Returns a list of network address forwards (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-forwards/network\_forwards\_get> \]
+    Returns a list of network address forwards (URLs).
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
 
 ## Network Peers
 
 - **create\_network\_peer**
 
-    Initiates/creates a new network peering. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-peers/network\_peers\_post> \]
+    Initiates/creates a new network peering.
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
 
 - **delete\_network\_peer**
 
-    Removes the network peering. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-peers/network\_peer\_delete> \]
+    Removes the network peering.
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
+    - `peerName`: string (inside URL)
 
 - **modify\_network\_peer**
 
-    Updates a subset of the network peering configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-peers/network\_peer\_patch> \]
+    Updates a subset of the network peering configuration.
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
+    - `peerName`: string (inside URL)
 
 - **network\_peer**
 
-    Gets a specific network peering. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-peers/network\_peer\_get> \]
+    Gets a specific network peering.
 
-    Updates the entire network peering configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-peers/network\_peer\_put> \]
+    Updates the entire network peering configuration.
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
+    - `peerName`: string (inside URL)
 
 - **network\_peer\_recursion1**
 
-    Returns a list of network peers (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-peers/network\_peer\_get\_recursion1> \]
+    Returns a list of network peers (structs).
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
 
 - **network\_peers**
 
-    Returns a list of network peers (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-peers/network\_peers\_get> \]
+    Returns a list of network peers (URLs).
 
     - `project`: string, optional
+    - `networkName`: string (inside URL)
 
 ## Network Zones
 
 - **create\_network\_zone**
 
-    Creates a new network zone. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zones\_post> \]
+    Creates a new network zone.
 
     - `project`: string, optional
 
 - **create\_network\_zone\_record**
 
-    Creates a new network zone record. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_records\_post> \]
+    Creates a new network zone record.
 
     - `project`: string, optional
+    - `zone`: string (inside URL)
 
 - **delete\_network\_zone**
 
-    Removes the network zone. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_delete> \]
+    Removes the network zone.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **delete\_network\_zone\_record**
 
-    Removes the network zone record. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_record\_delete> \]
+    Removes the network zone record.
 
     - `project`: string, optional
+    - `zone`: string (inside URL)
+    - `name`: string (inside URL)
 
 - **modify\_network\_zone**
 
-    Updates a subset of the network zone configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_patch> \]
+    Updates a subset of the network zone configuration.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **modify\_network\_zone\_record**
 
-    Updates a subset of the network zone record configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_record\_patch> \]
+    Updates a subset of the network zone record configuration.
 
     - `project`: string, optional
+    - `zone`: string (inside URL)
+    - `name`: string (inside URL)
 
 - **network\_zone**
 
-    Gets a specific network zone. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_get> \]
+    Gets a specific network zone.
 
-    Updates the entire network zone configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_put> \]
+    Updates the entire network zone configuration.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **network\_zone\_record**
 
-    Gets a specific network zone record. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_record\_get> \]
+    Gets a specific network zone record.
 
-    Updates the entire network zone record configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_record\_put> \]
+    Updates the entire network zone record configuration.
 
     - `project`: string, optional
+    - `zone`: string (inside URL)
+    - `name`: string (inside URL)
 
 - **network\_zone\_records**
 
-    Returns a list of network zone records (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_records\_get> \]
+    Returns a list of network zone records (URLs).
 
     - `project`: string, optional
+    - `zone`: string (inside URL)
 
 - **network\_zone\_records\_recursion1**
 
-    Returns a list of network zone records (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zone\_records\_get\_recursion1> \]
+    Returns a list of network zone records (structs).
 
     - `project`: string, optional
+    - `zone`: string (inside URL)
 
 - **network\_zones**
 
-    Returns a list of network zones (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zones\_get> \]
+    Returns a list of network zones (URLs).
 
     - `project`: string, optional
 
 - **network\_zones\_recursion1**
 
-    Returns a list of network zones (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/network-zones/network\_zones\_get\_recursion1> \]
+    Returns a list of network zones (structs).
 
     - `project`: string, optional
 
@@ -811,98 +957,111 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 - **create\_network**
 
     Creates a new network.
-    When clustered, most network types require individual POST for each cluster member prior to a global POST. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/networks/networks\_post> \]
+    When clustered, most network types require individual POST for each cluster member prior to a global POST.
 
     - `project`: string, optional
     - `target`: string, optional
 
 - **delete\_network**
 
-    Removes the network. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/networks/network\_delete> \]
+    Removes the network.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **modify\_network**
 
-    Updates a subset of the network configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/networks/network\_patch> \]
+    Updates a subset of the network configuration.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
 
 - **network**
 
-    Gets a specific network. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/networks/network\_get> \]
+    Gets a specific network.
 
-    Updates the entire network configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/networks/network\_put> \]
+    Updates the entire network configuration.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
 
 - **networks**
 
-    Returns a list of networks (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/networks/networks\_get> \]
+    Returns a list of networks (URLs).
 
     - `project`: string, optional
 
 - **networks\_leases**
 
-    Returns a list of DHCP leases for the network. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/networks/networks\_leases\_get> \]
+    Returns a list of DHCP leases for the network.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
 
 - **networks\_recursion1**
 
-    Returns a list of networks (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/networks/networks\_get\_recursion1> \]
+    Returns a list of networks (structs).
 
     - `project`: string, optional
 
 - **networks\_state**
 
-    Returns the current network state information. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/networks/networks\_state\_get> \]
+    Returns the current network state information.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
 
 - **rename\_network**
 
-    Renames an existing network. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/networks/network\_post> \]
+    Renames an existing network.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 ## Operations
 
 - **delete\_operation**
 
-    Cancels the operation if supported. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/operations/operation\_delete> \]
+    Cancels the operation if supported.
+
+    - `id`: string (inside URL)
 
 - **operation**
 
-    Gets the operation state. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/operations/operation\_get> \]
+    Gets the operation state.
+
+    - `id`: string (inside URL)
 
 - **operation\_wait**
 
-    Waits for the operation to reach a final state (or timeout) and retrieve its final state. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/operations/operation\_wait\_get> \]
+    Waits for the operation to reach a final state (or timeout) and retrieve its final state.
 
     - `timeout`: integer, optional
+    - `id`: string (inside URL)
 
 - **operation\_wait\_untrusted**
 
     Waits for the operation to reach a final state (or timeout) and retrieve its final state.
 
-    When accessed by an untrusted user, the secret token must be provided. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/operations/operation\_wait\_get\_untrusted> \]
+    When accessed by an untrusted user, the secret token must be provided.
 
     - `secret`: string, optional
     - `timeout`: integer, optional
+    - `id`: string (inside URL)
 
 - **operation\_websocket**
 
     Connects to an associated websocket stream for the operation.
     This should almost never be done directly by a client, instead it's
     meant for LXD to LXD communication with the client only relaying the
-    connection information to the servers. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/operations/operation\_websocket\_get> \]
+    connection information to the servers.
 
     - `secret`: string, optional
+    - `id`: string (inside URL)
 
 - **operation\_websocket\_untrusted**
 
@@ -912,17 +1071,18 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
     connection information to the servers.
 
     The untrusted endpoint is used by the target server to connect to the source server.
-    Authentication is performed through the secret token. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/operations/operation\_websocket\_get\_untrusted> \]
+    Authentication is performed through the secret token.
 
     - `secret`: string, optional
+    - `id`: string (inside URL)
 
 - **operations**
 
-    Returns a dict of operation type to operation list (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/operations/operations\_get> \]
+    Returns a dict of operation type to operation list (URLs).
 
 - **operations\_recursion1**
 
-    Returns a list of operations (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/operations/operations\_get\_recursion1> \]
+    Returns a list of operations (structs).
 
     - `project`: string, optional
 
@@ -930,83 +1090,97 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 
 - **create\_profile**
 
-    Creates a new profile. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/profiles/profiles\_post> \]
+    Creates a new profile.
 
     - `project`: string, optional
 
 - **delete\_profile**
 
-    Removes the profile. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/profiles/profile\_delete> \]
+    Removes the profile.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **modify\_profile**
 
-    Updates a subset of the profile configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/profiles/profile\_patch> \]
+    Updates a subset of the profile configuration.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **profile**
 
-    Gets a specific profile. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/profiles/profile\_get> \]
+    Gets a specific profile.
 
-    Updates the entire profile configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/profiles/profile\_put> \]
+    Updates the entire profile configuration.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **profiles**
 
-    Returns a list of profiles (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/profiles/profiles\_get> \]
+    Returns a list of profiles (URLs).
 
     - `project`: string, optional
 
 - **profiles\_recursion1**
 
-    Returns a list of profiles (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/profiles/profiles\_get\_recursion1> \]
+    Returns a list of profiles (structs).
 
     - `project`: string, optional
 
 - **rename\_profile**
 
-    Renames an existing profile. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/profiles/profile\_post> \]
+    Renames an existing profile.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 ## Projects
 
 - **create\_project**
 
-    Creates a new project. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/projects/projects\_post> \]
+    Creates a new project.
 
 - **delete\_project**
 
-    Removes the project. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/projects/project\_delete> \]
+    Removes the project.
+
+    - `name`: string (inside URL)
 
 - **modify\_project**
 
-    Updates a subset of the project configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/projects/project\_patch> \]
+    Updates a subset of the project configuration.
+
+    - `name`: string (inside URL)
 
 - **project**
 
-    Gets a specific project. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/projects/project\_get> \]
+    Gets a specific project.
 
-    Updates the entire project configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/projects/project\_put> \]
+    Updates the entire project configuration.
+
+    - `name`: string (inside URL)
 
 - **project\_state**
 
-    Gets a specific project resource consumption information. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/projects/project\_state\_get> \]
+    Gets a specific project resource consumption information.
+
+    - `name`: string (inside URL)
 
 - **projects**
 
-    Returns a list of projects (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/projects/projects\_get> \]
+    Returns a list of projects (URLs).
 
 - **projects\_recursion1**
 
-    Returns a list of projects (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/projects/projects\_get\_recursion1> \]
+    Returns a list of projects (structs).
 
 - **rename\_project**
 
-    Renames an existing project. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/projects/project\_post> \]
+    Renames an existing project.
+
+    - `name`: string (inside URL)
 
 ## Server
 
@@ -1015,32 +1189,32 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
     Returns a list of supported API versions (URLs).
 
     Internal API endpoints are not reported as those aren't versioned and
-    should only be used by LXD itself. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/server/api\_get> \]
+    should only be used by LXD itself.
 
 - **events**
 
-    Connects to the event API using websocket. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/server/events\_get> \]
+    Connects to the event API using websocket.
 
     - `project`: string, optional
     - `type`: string, optional
 
 - **modify\_server**
 
-    Updates a subset of the server configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/server/server\_patch> \]
+    Updates a subset of the server configuration.
 
     - `target`: string, optional
 
 - **resources**
 
-    Gets the hardware information profile of the LXD server. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/server/resources\_get> \]
+    Gets the hardware information profile of the LXD server.
 
     - `target`: string, optional
 
 - **server**
 
-    Shows the full server environment and configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/server/server\_get> \]
+    Shows the full server environment and configuration.
 
-    Updates the entire server configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/server/server\_put> \]
+    Updates the entire server configuration.
 
     - `project`: string, optional
     - `target`: string, optional
@@ -1051,72 +1225,93 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
     which is required by untrusted clients to reach a server.
 
     The \`?public\` part of the URL isn't required, it's simply used to
-    separate the two behaviors of this endpoint. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/server/server\_get\_untrusted> \]
+    separate the two behaviors of this endpoint.
 
 ## Storage
 
 - **create\_storage\_pool**
 
     Creates a new storage pool.
-    When clustered, storage pools require individual POST for each cluster member prior to a global POST. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pools\_post> \]
+    When clustered, storage pools require individual POST for each cluster member prior to a global POST.
 
     - `project`: string, optional
     - `target`: string, optional
 
 - **create\_storage\_pool\_volume**
 
-    Creates a new storage volume. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_post> \]
+    Creates a new storage volume.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
 
 - **create\_storage\_pool\_volumes\_backup**
 
-    Creates a new storage volume backup. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_backups\_post> \]
+    Creates a new storage volume backup.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **create\_storage\_pool\_volumes\_snapshot**
 
-    Creates a new storage volume snapshot. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_snapshots\_post> \]
+    Creates a new storage volume snapshot.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **create\_storage\_pool\_volumes\_type**
 
-    Creates a new storage volume (type specific endpoint). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_post> \]
+    Creates a new storage volume (type specific endpoint).
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
 
 - **delete\_storage\_pool\_volume\_type**
 
-    Removes the storage volume. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volume\_type\_delete> \]
+    Removes the storage volume.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **delete\_storage\_pool\_volumes\_type\_backup**
 
-    Deletes a new storage volume backup. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_backup\_delete> \]
+    Deletes a new storage volume backup.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
+    - `backup`: string (inside URL)
 
 - **delete\_storage\_pool\_volumes\_type\_snapshot**
 
-    Deletes a new storage volume snapshot. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_snapshot\_delete> \]
+    Deletes a new storage volume snapshot.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
+    - `snapshot`: string (inside URL)
 
 - **delete\_storage\_pools**
 
-    Removes the storage pool. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pools\_delete> \]
+    Removes the storage pool.
 
     - `project`: string, optional
+    - `name`: string (inside URL)
 
 - **migrate\_storage\_pool\_volume\_type**
 
@@ -1126,167 +1321,224 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
     For rename or move within the same server, this is a simple background operation with progress data.
     For migration, in the push case, this will similarly be a background
     operation with progress data, for the pull case, it will be a websocket
-    operation with a number of secrets to be passed to the target server. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volume\_type\_post> \]
+    operation with a number of secrets to be passed to the target server.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **modify\_storage\_pool**
 
-    Updates a subset of the storage pool configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_patch> \]
+    Updates a subset of the storage pool configuration.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
 
 - **modify\_storage\_pool\_volume\_type**
 
-    Updates a subset of the storage volume configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volume\_type\_patch> \]
+    Updates a subset of the storage volume configuration.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **modify\_storage\_pool\_volumes\_type\_snapshot**
 
-    Updates a subset of the storage volume snapshot configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_snapshot\_patch> \]
+    Updates a subset of the storage volume snapshot configuration.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
+    - `snapshot`: string (inside URL)
 
 - **rename\_storage\_pool\_volumes\_type\_backup**
 
-    Renames a storage volume backup. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_backup\_post> \]
+    Renames a storage volume backup.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
+    - `backup`: string (inside URL)
 
 - **rename\_storage\_pool\_volumes\_type\_snapshot**
 
-    Renames a storage volume snapshot. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_snapshot\_post> \]
+    Renames a storage volume snapshot.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
+    - `snapshot`: string (inside URL)
 
 - **storage\_pool**
 
-    Gets a specific storage pool. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_get> \]
+    Gets a specific storage pool.
 
-    Updates the entire storage pool configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_put> \]
+    Updates the entire storage pool configuration.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
 
 - **storage\_pool\_resources**
 
-    Gets the usage information for the storage pool. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_resources> \]
+    Gets the usage information for the storage pool.
 
     - `target`: string, optional
+    - `name`: string (inside URL)
 
 - **storage\_pool\_volume\_type**
 
-    Gets a specific storage volume. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volume\_type\_get> \]
+    Gets a specific storage volume.
 
-    Updates the entire storage volume configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volume\_type\_put> \]
+    Updates the entire storage volume configuration.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **storage\_pool\_volume\_type\_state**
 
-    Gets a specific storage volume state (usage data). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volume\_type\_state\_get> \]
+    Gets a specific storage volume state (usage data).
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **storage\_pool\_volumes**
 
-    Returns a list of storage volumes (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_get> \]
+    Returns a list of storage volumes (URLs).
 
     - `filter`: string, optional
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
 
 - **storage\_pool\_volumes\_recursion1**
 
-    Returns a list of storage volumes (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_get\_recursion1> \]
+    Returns a list of storage volumes (structs).
 
     - `filter`: string, optional
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
 
 - **storage\_pool\_volumes\_type**
 
-    Returns a list of storage volumes (URLs) (type specific endpoint). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_get> \]
+    Returns a list of storage volumes (URLs) (type specific endpoint).
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
 
 - **storage\_pool\_volumes\_type\_backup**
 
-    Gets a specific storage volume backup. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_backup\_get> \]
+    Gets a specific storage volume backup.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
+    - `backup`: string (inside URL)
 
 - **storage\_pool\_volumes\_type\_backup\_export**
 
-    Download the raw backup file from the server. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_backup\_export\_get> \]
+    Download the raw backup file from the server.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
+    - `backup`: string (inside URL)
 
 - **storage\_pool\_volumes\_type\_backups**
 
-    Returns a list of storage volume backups (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_backups\_get> \]
+    Returns a list of storage volume backups (URLs).
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **storage\_pool\_volumes\_type\_backups\_recursion1**
 
-    Returns a list of storage volume backups (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_backups\_get\_recursion1> \]
+    Returns a list of storage volume backups (structs).
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **storage\_pool\_volumes\_type\_recursion1**
 
-    Returns a list of storage volumes (structs) (type specific endpoint). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_get\_recursion1> \]
+    Returns a list of storage volumes (structs) (type specific endpoint).
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
 
 - **storage\_pool\_volumes\_type\_snapshot**
 
-    Gets a specific storage volume snapshot. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_snapshot\_get> \]
+    Gets a specific storage volume snapshot.
 
-    Updates the entire storage volume snapshot configuration. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_snapshot\_put> \]
+    Updates the entire storage volume snapshot configuration.
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
+    - `snapshot`: string (inside URL)
 
 - **storage\_pool\_volumes\_type\_snapshots**
 
-    Returns a list of storage volume snapshots (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_snapshots\_get> \]
+    Returns a list of storage volume snapshots (URLs).
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **storage\_pool\_volumes\_type\_snapshots\_recursion1**
 
-    Returns a list of storage volume snapshots (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pool\_volumes\_type\_snapshots\_get\_recursion1> \]
+    Returns a list of storage volume snapshots (structs).
 
     - `project`: string, optional
     - `target`: string, optional
+    - `name`: string (inside URL)
+    - `type`: string (inside URL)
+    - `volume`: string (inside URL)
 
 - **storage\_pools**
 
-    Returns a list of storage pools (URLs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pools\_get> \]
+    Returns a list of storage pools (URLs).
 
     - `project`: string, optional
 
 - **storage\_pools\_recursion1**
 
-    Returns a list of storage pools (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/storage/storage\_pools\_get\_recursion1> \]
+    Returns a list of storage pools (structs).
 
     - `project`: string, optional
 
@@ -1294,27 +1546,33 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 
 - **delete\_warning**
 
-    Removes the warning. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/warnings/warning\_delete> \]
+    Removes the warning.
+
+    - `uuid`: string (inside URL)
 
 - **modify\_warning**
 
-    Updates a subset of the warning status. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/warnings/warning\_patch> \]
+    Updates a subset of the warning status.
+
+    - `uuid`: string (inside URL)
 
 - **warning**
 
-    Gets a specific warning. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/warnings/warning\_get> \]
+    Gets a specific warning.
 
-    Updates the warning status. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/warnings/warning\_put> \]
+    Updates the warning status.
+
+    - `uuid`: string (inside URL)
 
 - **warnings**
 
-    Returns a list of warnings. \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/warnings/warnings\_get> \]
+    Returns a list of warnings.
 
     - `project`: string, optional
 
 - **warnings\_recursion1**
 
-    Returns a list of warnings (structs). \[L <Spec|https://linuxcontainers.org/lxd/api/master/#/warnings/warnings\_get\_recursion1> \]
+    Returns a list of warnings (structs).
 
     - `project`: string, optional
 
