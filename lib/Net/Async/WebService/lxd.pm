@@ -18,7 +18,7 @@ use Moose;
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($DEBUG);
 no warnings 'once';
-our $log = Log::Log4perl->get_logger("nado");
+our $log = Log::Log4perl->get_logger("nawl");
 
 
 has 'loop'                 => (isa => 'IO::Async::Loop',     is => 'ro' );
