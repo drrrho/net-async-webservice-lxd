@@ -105,13 +105,13 @@ my $yaml = _fix_broken_YAML( $data );
 # write_file('/tmp/xxx.yaml', $yaml);
 
 use YAML;
-my $rest_api = YAML::Load( $yaml );
+our $rest_api = YAML::Load( $yaml );
 #warn Dumper [ sort keys %{ $rest_api->{paths} } ];
 #warn scalar keys %{ $rest_api->{paths} }; #exit;
 
 my $POST_translations = {
                                instances_post => 'create_instance'                                   , # Creates a new instance on LXD.                               
-                          images_aliases_post => 'create_images_alias'                               , # Creates a new image alias.                                   
+                          images_aliases_post => 'add_images_alias'                                  , # Creates a new image alias.                                   
       storage_pool_volumes_type_snapshot_post => 'rename_storage_pool_volumes_type_snapshot'         , # Renames a storage volume snapshot.                           
                            storage_pools_post => 'create_storage_pool'                               , # Creates a new storage pool.                                  
                        instance_snapshot_post => 'migrate_instance_snapshot'                         , # Renames or migrates an instance snapshot to another server.  
@@ -156,8 +156,8 @@ my $POST_translations = {
                             network_acls_post => 'create_network_acl'                                , # Creates a new network ACL.
 };
 
-my $meta = __PACKAGE__->meta;
-my $META; # association between methods and what is in the spec
+my  $meta = __PACKAGE__->meta;
+our $META; # association between methods and what is in the spec
 
 my %uniq_methods; # make sure we do not duplicate method by name
 foreach my $path ( keys %{ $rest_api->{paths} } ) {
