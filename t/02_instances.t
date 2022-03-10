@@ -41,8 +41,8 @@ eval {
     $lxd->create_project(
 	body => {
 	    "config" => {
-		"features.images"   => "false",
-		"features.profiles" => "false"
+		"features.images"   => "true",
+		"features.profiles" => "false",
 	    },
 		"description" => "Net::Async::WebService::lxd test suite",
 		"name" => $PROJECT[1],
@@ -52,10 +52,11 @@ eval {
 if (DONE) {
     my $AGENDA = q{instances: };
 
-    $lxd->create_instance(
+#-- simple life cycle
+    my $f = $lxd->create_instance(
 	@PROJECT,
 	body => {
-	    name => 'xxxxx',
+	    name => "ccc$$",
 	    source => {
 		type => 'image',
 		mode => 'pull',
@@ -66,46 +67,39 @@ if (DONE) {
 	    profile => [ 'default' ],
 	    architecture => 'x86_64',
 	    config       => {},
-	} )->get;
-
-exit;
-
-#-- simple life cycle
-    my $f = $lxd->create_instance(
-	@PROJECT,
-	body => {
-	    architecture => 'x86_64',
-	    profiles     => [ 'default'  ],
-	    name         => 'test1',
-	    source       => { 'type' => 'image', fingerprint => '6dc6aa7c8c00' },
-	    config       => {},
 	} );
-
     is( $f->get, 'success', $AGENDA.'created inside project');
+#--
+    my @is = @{ $lxd->images( @PROJECT )->get };
+    ok((scalar @is) == 1, $AGENDA.'list 1 image');
+    my ($fi) = @is;
+    $fi =~ s{/1.0/images/}{};
+
     throws_ok {
 	$lxd->create_instance(
 	    @PROJECT,
 	    body => {
 		architecture => 'x86_64',
 		profiles     => [ 'default'  ],
-		name         => 'test1',
-		source       => { 'type' => 'image', fingerprint => '6dc6aa7c8c00' },
+		name         => "ccc$$",
+		source       => { 'type' => 'image', fingerprint => $fi },
 		config       => {},
 	    } )->get;
     } qr/already/, $AGENDA.'container exists';
 #-- instances
     $f = $lxd->instances( @PROJECT );
     isa_ok( $f, 'Future' );
-    like( $f->get->[0],  qr{/1.0/instances/test1}, $AGENDA.'one instance found');
+    ok( (grep { $_ =~ qr{/1.0/instances/ccc$$} } @{ $f->get }), $AGENDA.'our instance found');
     isa_ok ( $lxd->instances( )->get, 'ARRAY', $AGENDA.'default project');
 
     ok( eq_set( $lxd->instances( project => 'testxxx' )->get, [] ), $AGENDA.'wrong project');
 #    ok( eq_set( $lxd->instances( 'all-projects' => 'true' )->get, [ '/1.0/instances/test'] ), $AGENDA.'all projects');
+
 #--
-    my $i = $lxd->instance( name => 'test1', @PROJECT )->get;
+    my $i = $lxd->instance( name => "ccc$$", @PROJECT )->get;
 #warn Dumper $i;
     cmp_deeply( $i, superhashof({
-	name         => 'test1',
+	name         => "ccc$$",
 	description  => ignore(),
 	architecture => ignore(),
 	status       => ignore(),
@@ -113,18 +107,20 @@ exit;
 
 #-- instances recursive
     my $is = $lxd->instances_recursion1( @PROJECT )->get;
+    ($i) = grep { $_->{name} eq "ccc$$" } @$is;
 #warn Dumper $is; exit;
-    cmp_deeply( $is->[0], superhashof({
-	name         => 'test1',
+    cmp_deeply( $i, superhashof({
+	name         => "ccc$$",
 	description  => ignore(),
 	config       => ignore(),
 	expanded_config => ignore(),
 	status       => ignore(),
 				}), $AGENDA.'instances recursion 1');
     $is = $lxd->instances_recursion2( @PROJECT )->get;
+    ($i) = grep { $_->{name} eq "ccc$$" } @$is;
 #warn Dumper $is; exit;
-    cmp_deeply( $is->[0], superhashof({
-	name         => 'test1',
+    cmp_deeply( $i, superhashof({
+	name         => "ccc$$",
 	backups      => ignore(),
 	description  => ignore(),
 	config       => ignore(),
@@ -133,12 +129,12 @@ exit;
 				}), $AGENDA.'instances recursion 2');
 #--
     throws_ok {
-	$lxd->instance( @PROJECT, name => 'xxx' )->get;
+	$lxd->instance( @PROJECT, name => "xxx$$" )->get;
     } qr/not found/i, $AGENDA.'non-existing instance bombed';
 #--
-    $i = $lxd->instance_recursion1( @PROJECT, name => 'test1' )->get;
+    $i = $lxd->instance_recursion1( @PROJECT, name => "ccc$$" )->get;
     cmp_deeply( $i, superhashof({
-	name         => 'test1',
+	name         => "ccc$$",
 	description  => ignore(),
 	architecture => ignore(),
 	backups      => ignore(),
@@ -148,7 +144,7 @@ exit;
 	status       => ignore(),
 				}), $AGENDA.'instance recursive data');
 #--
-    my $s = $lxd->instance_state( @PROJECT, name => 'test1' )->get;
+    my $s = $lxd->instance_state( @PROJECT, name => "ccc$$" )->get;
     cmp_deeply( $s, superhashof({
 	status         => 'Stopped',
 	processes      => 0,
@@ -157,7 +153,7 @@ exit;
 	network        => ignore(),
 				}), $AGENDA.'instance state');
 #- PUT state
-    $s = $lxd->instance_state( @PROJECT, name => 'test1',
+    $s = $lxd->instance_state( @PROJECT, name => "ccc$$",
 			       body => {
 				   action   => "start",
 				   force    => JSON::false,
@@ -167,20 +163,24 @@ exit;
 #warn Dumper $s;
 #--
     throws_ok {
-	$lxd->delete_instance(@PROJECT, name => 'test1')->get;
+	$lxd->delete_instance(@PROJECT, name => "ccc$$")->get;
     } qr/running/i, $AGENDA.'failed to delete running container';
 #--
-    $lxd->instance_state( @PROJECT, name => 'test1',
+    $lxd->instance_state( @PROJECT, name => "ccc$$",
 			  body => {
 			      action   => "stop",
 			      force    => JSON::false,
 			      stateful => JSON::false,
 			      timeout  => 30,
 			  } )->get;
-    is( $lxd->delete_instance(@PROJECT, name => 'test1')->get, 'success', $AGENDA.'deleted container');
+    is( $lxd->delete_instance(@PROJECT, name => "ccc$$")->get, 'success', $AGENDA.'deleted container');
+#--
+    $lxd->delete_image( @PROJECT, fingerprint => $fi )->get;
 }
 
-$lxd->delete_project( name => $PROJECT[1] )->get;
+eval {
+    $lxd->delete_project( name => $PROJECT[1] )->get;
+};
 
 done_testing;
 
