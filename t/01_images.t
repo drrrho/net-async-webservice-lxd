@@ -41,8 +41,6 @@ eval {
     $lxd->create_project(
 	body => {
 	    "config" => {
-		"features.images"   => "false",
-		"features.profiles" => "false"
 	    },
 		"description" => "Net::Async::WebService::lxd test suite",
 		"name" => $PROJECT[1],
@@ -50,25 +48,111 @@ eval {
 };
 
 if (DONE) {
-    my $AGENDA = q{instances: };
+    my $AGENDA = q{images: };
 
-    $lxd->create_instance(
+    my $f = $lxd->create_image(
 	@PROJECT,
 	body => {
-	    name => 'xxxxx',
+	    aliases => [ {"name" => "xxx$$", } ],
+#            public => 'true',
+#            auto_update => 0,
 	    source => {
-		type => 'image',
-		mode => 'pull',
-		server => 'https://images.linuxcontainers.org',
+		type     => "image",
+                mode     => "pull",
+		server   => 'https://images.linuxcontainers.org',
 		protocol => 'simplestreams',
-		alias => 'alpine/3.12',
-	    },
-	    profile => [ 'default' ],
-	    architecture => 'x86_64',
-	    config       => {},
-	} )->get;
+		alias    => 'openwrt/snapshot',
+            },
+        }
+	);
+    isa_ok($f, 'Future', $AGENDA.'image creation initiated');
 
-exit;
+    my $r = $f->get;
+    is($r, 'success', $AGENDA.'image creation finished');
+#--
+    my @is = @{ $lxd->images( @PROJECT )->get };
+    ok((scalar @is) == 1, $AGENDA.'list 1 image');
+#warn Dumper \@is;
+    my ($fi) = @is;
+    $fi =~ s{/1.0/images/}{};
+    $f = $lxd->image( @PROJECT, fingerprint => $fi );
+    isa_ok($f, 'Future', $AGENDA.'image retrieval initiated');
+    my $i = $f->get;
+#warn "image info ".Dumper $i;
+    is( $i->{fingerprint}, $fi, $AGENDA.'retrieved image fingerprint');
+    is( $i->{update_source}->{server}, 'https://images.linuxcontainers.org', $AGENDA.'retrieved image update source' );
+    is( $i->{properties}->{os}, 'Openwrt', $AGENDA.'retrieved image os');
+#--
+    $r = $lxd->images_aliases(@PROJECT)->get;
+    ok( (grep { $_ =~ /xxx$$/ } @$r), $AGENDA.'alias found');
+#--
+    $r = $lxd->image_alias( @PROJECT, name => "xxx$$" )->get;
+    is ($r->{target}, $fi, $AGENDA.'alias info retrieved');
+#--
+    $r = $lxd->modify_images_alias( @PROJECT, name => "xxx$$", body => { description => 'new description' })->get;
+    $r = $lxd->image_alias( @PROJECT, name => "xxx$$" )->get;
+    is ($r->{target},      $fi, $AGENDA.'modified alias info retrieved');
+    is ($r->{description}, 'new description', $AGENDA.'modified alias info retrieved');
+#--
+    $r = $lxd->rename_images_alias( @PROJECT, name => "xxx$$", body => { name => "rumsti$$" })->get;
+    is($r, 'success', $AGENDA.'image alias modify finished');
+
+    throws_ok {
+	$lxd->image_alias( @PROJECT, name => "xxx$$" )->get;
+    } qr/not found/i, $AGENDA.'modified alias';
+    $r = $lxd->image_alias( @PROJECT, name => "rumsti$$" )->get;
+    is ($r->{target},      $fi, $AGENDA.'modified alias info retrieved');
+    is ($r->{description}, 'new description', $AGENDA.'modified alias info retrieved');
+#--
+    $r = $lxd->add_images_alias( @PROJECT, body => {
+	"description" => "newer description",
+        "name" =>  "ramsti$$",
+        "target" => $fi,
+        "type"   => "container" })->get;
+    is($r, 'success', $AGENDA.'image alias add finished');
+#--
+    $r = $lxd->delete_image_alias( @PROJECT, name => "rumsti$$")->get;
+    is_deeply ($r, {}, $AGENDA.'image alias delete finished');
+
+    $r = $lxd->image_alias( @PROJECT, name => "ramsti$$" )->get;
+    is ($r->{target},      $fi, $AGENDA.'added alias info retrieved');
+    is ($r->{description}, 'newer description', $AGENDA.'added alias info retrieved');
+
+#warn Dumper $r;exit;
+#--
+    $r = $lxd->modify_image( @PROJECT, fingerprint => $fi, body => {
+	properties => {
+	    os => 'Rumsti',
+	}
+			     })->get;
+    is_deeply ($r, {}, $AGENDA.'patching image information');
+#warn "modify response ".Dumper $r;
+    $i = $lxd->image( @PROJECT, fingerprint => $fi )->get;
+    is( $i->{properties}->{os}, 'Rumsti', $AGENDA.'modified image os');
+
+#warn "after modify ".Dumper $i;
+#--
+    $r = $lxd->update_images_refresh( @PROJECT, fingerprint => $fi )->get;
+    is($r, 'success', $AGENDA.'image refresh finished');
+#--
+    if (0) { # TO BE DONE
+	$f = $lxd->image_export( @PROJECT, fingerprint => $fi );
+	$r = $f->get;
+warn Dumper $r;
+    }
+#--
+    $f = $lxd->delete_image( @PROJECT, fingerprint => $fi );
+    isa_ok($f, 'Future', $AGENDA.'image deletion initiated');
+    $r = $f->get;
+    is($r, 'success', $AGENDA.'image deletion finished');
+}
+
+$lxd->delete_project( name => $PROJECT[1] )->get;
+
+done_testing;
+
+__END__
+
 
 #-- simple life cycle
     my $f = $lxd->create_instance(
@@ -179,11 +263,4 @@ exit;
 			  } )->get;
     is( $lxd->delete_instance(@PROJECT, name => 'test1')->get, 'success', $AGENDA.'deleted container');
 }
-
-$lxd->delete_project( name => $PROJECT[1] )->get;
-
-done_testing;
-
-__END__
-
 

@@ -49,6 +49,26 @@ if (DONE) {
     isa_ok( $f, 'Future', $AGENDA.'future');
     like( $f->get, qr/success/i, $AGENDA.'created project');
 #--
+    my $p = $lxd->project( name => 'test1' )->get;
+    is( $p->{description}, "test project", $AGENDA.'fetch info');
+    ok( exists $p->{config}, $AGENDA.'fetch info');
+#--
+    $p = $lxd->project_state( name => 'test1' )->get;
+    map { is( $_->{Usage}, 0, $AGENDA.'no usage' ) } values %{ $p->{resources} };
+#--
+    $lxd->rename_project( name => 'test1', body => { name => 'testx' } )->get;
+    $p = $lxd->project( name => 'testx' )->get;
+    is( $p->{description}, "test project", $AGENDA.'fetch info, renamed');
+
+    $lxd->rename_project( name => 'testx', body => { name => 'test1' } )->get;
+    $p = $lxd->project( name => 'test1' )->get;
+    is( $p->{description}, "test project", $AGENDA.'fetch info, rerenamed');
+#--
+    $lxd->modify_project( name => 'test1', body => { description => "XXX" } )->get;
+    $p = $lxd->project( name => 'test1' )->get;
+    is( $p->{description}, "XXX", $AGENDA.'modified description');
+#warn Dumper $p;
+#--
     throws_ok {
 	$lxd->create_project(
 	    body => {
