@@ -71,10 +71,11 @@ my $builder = $debian->new(
     },
     build_requires => {
         'Test::More'          => 0,
-        'Test::Deep'          => 0,
-        'Test::Exception'     => 0,
+	'Test::Deep'          => 0,
+	'Test::Exception'     => 0,
 	'JSON'                => 0,
 	'File::Slurp'         => 0,
+	'Test::CheckManifest' => 0,
     },
     requires => {
 	'IO::Async'               => 0,
