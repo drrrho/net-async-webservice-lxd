@@ -9,11 +9,11 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
    my $loop = IO::Async::Loop->new;
 
    use Net::Async::WebService::lxd;
-   my $lxd = Net::Async::WebService::lxd->new( loop               => $loop,
-					       endpoint           => 'https://192.168.0.50:8443',
-					       client_cert_file   => "t/client.crt",
-					       client_key_file    => "t/client.key",
-					       server_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
+   my $lxd = Net::Async::WebService::lxd->new( loop            => $loop,
+					       endpoint        => 'https://192.168.0.50:8443',
+					       SSL_cert_file   => "t/client.crt",
+					       SSL_key_file    => "t/client.key",
+					       SSL_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
                                               );
    $lxd->create_instance(
 	    body => {
@@ -36,6 +36,11 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 =head1 INTERFACE
 
 =head2 Constructor
+
+SSL_
+
+environment???
+
 
 @@@@
 @@@@ environemtn endpoint, project ...
@@ -325,9 +330,9 @@ Renames an existing cluster group.
 
 =over
 
-=item * B<create_image>
+=item * B<add_images_alias>
 
-Adds a new image to the image store.
+Creates a new image alias.
 
 =over
 
@@ -336,9 +341,9 @@ Adds a new image to the image store.
 
 =back
 
-=item * B<create_images_alias>
+=item * B<create_image>
 
-Creates a new image alias.
+Adds a new image to the image store.
 
 =over
 
@@ -2892,39 +2897,4 @@ automatically be notified of progress on your bug as I make changes.
 
 Copyright 2022 Robert Barta.
 
-This program is free software; you can redistribute it and/or modify it
-under the terms of the the Artistic License (2.0). You may obtain a
-copy of the full license at:
-
-L<http://www.perlfoundation.org/artistic_license_2_0>
-
-Any use, modification, and distribution of the Standard or Modified
-Versions is governed by this Artistic License. By using, modifying or
-distributing the Package, you accept this license. Do not use, modify,
-or distribute the Package, if you do not accept this license.
-
-If your Modified Version has been derived from a Modified Version made
-by someone other than you, you are nevertheless required to ensure that
-your Modified Version complies with the requirements of this license.
-
-This license does not grant you the right to use any trademark, service
-mark, tradename, or logo of the Copyright Holder.
-
-This license includes the non-exclusive, worldwide, free-of-charge
-patent license to make, have made, use, offer to sell, sell, import and
-otherwise transfer the Package with respect to any patent claims
-licensable by the Copyright Holder that are necessarily infringed by the
-Package. If you institute patent litigation (including a cross-claim or
-counterclaim) against any party alleging that the Package constitutes
-direct or contributory patent infringement, then this Artistic License
-to you shall terminate on the date that such litigation is filed.
-
-Disclaimer of Warranty: THE PACKAGE IS PROVIDED BY THE COPYRIGHT HOLDER
-AND CONTRIBUTORS "AS IS' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES.
-THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE, OR NON-INFRINGEMENT ARE DISCLAIMED TO THE EXTENT PERMITTED BY
-YOUR LOCAL LAW. UNLESS REQUIRED BY LAW, NO COPYRIGHT HOLDER OR
-CONTRIBUTOR WILL BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, OR
-CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THE PACKAGE,
-EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
