@@ -74,7 +74,6 @@ my $builder = $debian->new(
         'Test::Deep'          => 0,
         'Test::Exception'     => 0,
 	'JSON'                => 0,
-	'IO::Async'           => 0,
 	'File::Slurp'         => 0,
     },
     requires => {
@@ -90,6 +89,8 @@ my $builder = $debian->new(
 	    'HTTP::Response'      => 0,
 	    'HTTP::Cookies'       => 0,
 	    'Log::Log4perl'       => 0,
+	    'Net::Async::HTTP'    => 0,
+
     },
     add_to_cleanup     => [ 'Net-Async-WebService-lxd-*' ],
 );
