@@ -75,6 +75,7 @@ my $builder = $debian->new(
         'Test::Exception'     => 0,
 	'JSON'                => 0,
 	'IO::Async'           => 0,
+	'File::Slurp'         => 0,
     },
     requires => {
 	'IO::Async'               => 0,

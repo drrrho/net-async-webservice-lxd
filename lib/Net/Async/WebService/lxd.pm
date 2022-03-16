@@ -1,3 +1,61 @@
+package lxd::instance;
+
+use strict;
+use warnings;
+
+use JSON;
+use Data::Dumper;
+
+sub state {
+    my ($elf, $lxd, %params) = @_;
+    my $wait = delete $params{wait} // 1;
+    my $f = $lxd->instance_state( project => $elf->{project}, name => $elf->{name} );
+
+    if ($wait) {
+	return $f->get;
+    } else {
+	return $f;
+    }
+}
+
+sub restart {
+    return _action(shift, shift, "restart", @_);
+}
+sub start {
+    return _action(shift, shift, "start", @_);
+}
+sub stop {
+    return _action(shift, shift, "stop", @_);
+}
+sub freeze {
+    return _action(shift, shift, "freeze", @_);
+}
+sub unfreeze {
+    return _action(shift, shift, "unfreeze", @_);
+}
+
+sub _action {
+    my ($elf, $lxd, $action, %params) = @_;
+    $params{stateful}  //= JSON::false;
+    $params{force}    //= JSON::false;
+    $params{timeout} //= 30;
+    my $wait = delete $params{wait} // 1;
+
+    my $f = $lxd->instance_state( project => $elf->{project},
+				  name    => $elf->{name},
+				  body    => {
+				      action   => $action,
+				      %params,
+				  } );
+    if ($wait) {
+	return $f->get;
+    } else {
+	return $f;
+    }
+}
+
+1;
+
 package Net::Async::WebService::lxd;
 
 use strict;
@@ -24,9 +82,7 @@ our $log = Log::Log4perl->get_logger("nawl");
 has 'loop'                 => (isa => 'IO::Async::Loop',     is => 'ro' );
 has '_http'                => (isa => 'Net::Async::HTTP',    is => 'ro' );
 has 'endpoint'             => (isa => 'Str',	             is => 'ro' );
-has 'client_cert_file'     => (isa => 'Str',	             is => 'ro' );
-has 'client_key_file'      => (isa => 'Str',	             is => 'ro' );
-has 'server_fingerprint'   => (isa => 'Str',	             is => 'ro' );
+has '_SSL_'                => (isa => 'HashRef', default => sub { {} }, is => 'rw');
 has 'polling_time'         => (isa => 'Int', default => 1,   is => 'rw' );
 has '_timer'               => (isa => 'IO::Async::Timer::Periodic', is => 'ro' );
 has '_pendings'            => (isa => 'HashRef', default => sub { {} }, is => 'rw');
@@ -34,14 +90,26 @@ has '_pendings'            => (isa => 'HashRef', default => sub { {} }, is => 'r
 # need it for now
 has 'project'              => (isa => 'Str', is => 'ro');
 
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+
+    my %options = @_;                             # capture all options
+    my %SSL = map  { $_ => delete $options{$_} }  # remove any SSL_ related ones
+              grep { $_ =~ m/^SSL_/ }
+              keys %options;
+    return $class->$orig (%options,
+			  '_SSL_' => \%SSL,       # tuck them into ONE hash
+	                  );
+};
+
+
 sub BUILD {
     my $elf = shift;
     
     use Net::Async::HTTP;
     my $http = Net::Async::HTTP->new(
-	SSL_cert_file   => $elf->{client_cert_file},
-	SSL_key_file    => $elf->{client_key_file},
-	SSL_fingerprint => $elf->{server_fingerprint},
+	%{ $elf->{'_SSL_'} }                      # expand all SSL related options
 	);
 #-- add http resolver
     $elf->{loop}->add( $http );
@@ -55,18 +123,56 @@ sub BUILD {
 #warn "current pendings ".Dumper [ keys %$pendings ];
 	       if (scalar %$pendings) { # only if we have open issues
 		   my $ops = $elf->operations_recursion1( $elf->{project}? (project => $elf->{project}) : () )->get;
-#warn Dumper $ops;
-		   map      { delete $pendings->{ $_->{id} } }                             # delete this id from the local pendings
-		       map  { $pendings->{ $_->{id} }->{future}->done( 'success' ) && $_ }    # tunnel id, and set the future to done
-		       grep { $pendings->{ $_->{id} } }   # only look at those pendings we have open
-#map { warn Dumper $_ && $_ }
-		       @{ $ops->{success} }; # iterate over all recent success
-		   map      { delete $pendings->{ $_->{id} } }                             # delete this id from the local pendings
-#map { warn Dumper $_ }
-		       map  { $pendings->{ $_->{id} }->{future}->fail( $_->{err} ) && $_ }    # tunnel id, and set the future to fail
-		       grep { $pendings->{$_->{id}} }   # only look at those pendings we have open
-		       @{ $ops->{failure} }; # iterate over all recent success
-		   # ignore the running ops
+#warn "analyzing operations ".Dumper $ops;
+		   foreach my $op (@{ $ops->{success} }, @{ $ops->{failure} }) {
+		       next unless $pendings->{ $op->{id} };                               # we must be waiting for it, others will be ignored
+		       if ($op->{status} eq 'Success') {                                   # the good guys
+			   my $res;
+			   if (my $outs = $op->{metadata}->{output}) {                     # if there is something which produced some output
+			       foreach my $log (values %$outs) {                           # iterate over all the REST uris
+				   $log =~ m{/instances/(.+?)/logs/(.+\.(stdout|stderr))}; # fetch container and log file from it # TODO: relax?
+				   my $name = $1;
+				   my $logfile = $2;
+				   my $key = $3;
+				   $res->{$key} = $elf->instance_log(                      # fetch the actual contents
+				       $elf->{project} ? (project => $elf->{project}) : (),
+				       name     => $name,
+				       filename => $logfile,
+				       )->get;
+				   $elf->delete_instance_log(                              # clean up
+				       $elf->{project} ? (project => $elf->{project}) : (),
+				       name     => $name,
+				       filename => $logfile,
+				       )->get;
+			       }
+			   } else {
+			       $res = 'success';                                           # boring
+			   }
+			   $pendings->{ $op->{id} }->{future}->done( $res );
+
+		       } elsif ($op->{status} eq 'Failure') {
+			   $pendings->{ $op->{id} }->{future}->fail( $op->{err} );
+
+		       } else {
+			   $log->die("we should not be here");
+		       }
+		       delete $pendings->{ $op->{id} };                                    # delete this id from the local pendings
+#		       $elf->delete_operation( id => $op->{id} )->get;                     # purge operation from server
+		   }
+
+
+# 		   map      { delete $pendings->{ $_->{id} } }                             # delete this id from the local pendings
+# 		       map  { $pendings->{ $_->{id} }->{future}->done( 'success' ) && $_ }    # tunnel id, and set the future to done
+# 		       grep { $pendings->{ $_->{id} } }   # only look at those pendings we have open
+# #map { warn Dumper $_ && $_ }
+# 		       @{ $ops->{success} }; # iterate over all recent success
+
+# 		   map      { delete $pendings->{ $_->{id} } }                             # delete this id from the local pendings
+# #map { warn Dumper $_ }
+# 		       map  { $pendings->{ $_->{id} }->{future}->fail( $_->{err} ) && $_ }    # tunnel id, and set the future to fail
+# 		       grep { $pendings->{$_->{id}} }   # only look at those pendings we have open
+# 		       @{ $ops->{failure} }; # iterate over all recent failures
+# 		   # ignore the running ops
 	       }
 
            },
@@ -291,6 +397,8 @@ sub _generate_method {
 #	$params->{$_} or die "parameter '$_' not valid for '$path'" for keys %options;  # TODO validation
 #warn "params ".Dumper $params;
 
+	my $wantheaders = delete $options{wantheaders};
+
 	use URI;
 	my $uri = URI->new( $elf->{endpoint} . $fullpath );
 #warn ">>> uri $uri";
@@ -303,36 +411,94 @@ sub _generate_method {
 			   );
 
 	my $req = HTTP::Request->new( ($options{body} && $method eq 'GET' ? 'PUT' : $method),
-				      $uri,
-				      ($options{body}
-				       ? ( [ Content_Type => 'application/json; charset=UTF-8' ],
-					   encode_utf8(encode_json( $options{body} )) )
-				       : () ) );
-	$log->debug( ">>> ".$req->as_string );
+				      $uri );
+
+	$options{headers}->{'Content-Type'} //= 'application/json; charset=UTF-8';                                # if none is given, we assume that JSON is meant
+	$req->headers->header( %{ $options{headers} });                                                           # set all headers
+
+	# work on content body
+	if ($options{body}) {
+	    use feature 'switch';
+	    no warnings 'experimental';
+	    for ($options{headers}->{'Content-Type'}) {
+		when ('application/json; charset=UTF-8') {
+		    $req->content( encode_utf8(encode_json( $options{body} )) ) } 
+
+		when ('application/octet-stream') {
+		    $req->content_ref( \ $options{body} ) }                                                       # pass in reference to avoid copying
+
+		default {
+		    $log->logdie( "cannot handle body with ".$options{headers}->{'Content-Type'} ) }
+	    }
+	}
+
+	$log->debug( ">>> "._substr($req->as_string, 2000, '...') );
 
 	my $f = $elf->{loop}->new_future;
 	$elf->{_http}->do_request( request => $req,
 				   on_response => sub {
 					 my $resp = $_[0];
-					 $log->debug( "<<< ".$resp->as_string );
-					 if ($resp->is_success) {                      # the HTTP req was handled ok
-					     my $data = from_json ($resp->content);    # so there should be a solid json
-					     if ($data->{type} eq 'sync') {            # we are finished with the operation
-						 if ($data->{status_code} == 200) {    # and everyhing is ok from the lxd side
-						     $f->done( $data->{metadata} // $data->{status});     # that would be the result
-						 } else {
-						     $f->fail( $data->{error} );       # lxd sent an error
+					 $log->debug( "<<< "._substr($resp->as_string, 2000, '...') );
+					 if ($resp->is_success) {                                                 # the HTTP req was handled ok
+					     if ($resp->content_type eq 'application/json') {
+						 my $data = from_json ($resp->content);                           # so there should be a solid json
+						 if ($data->{type} eq 'sync') {                                   # we are finished with the operation
+						     if ($data->{status_code} == 200) {                           # and everything is ok from the lxd side
+							 $f->done( ($data->{metadata} // lc($data->{status})),    # that would be the result
+								   ($wantheaders ? $resp->headers : ()));         # and headers if required by the caller
+						     } else {
+							 $f->fail( $data->{error} );                              # lxd sent an error
+						     }
+						 } else {                                                         # the only other option: we are not finished on the lxd server
+#warn "not sync response ".Dumper $data;
+						     $log->debug( "pending operation: ".$data->{metadata}->{description} );
+
+#						     my @ws = _create_websockets( $elf, $data->{metadata}->{metadata}->{fds}, $data->{operation} )
+#							 if ($data->{metadata}->{class} eq 'websocket');
+
+						     $elf->{_pendings}->{ $data->{metadata}->{id} } = {
+							 operation => $data->{operation},
+							 future    => $f,
+#							 websockets => \@ws,
+						     };
 						 }
-					     } else {                                  # the only other option: we are not finished on the lxd server
-						 #warn Dumper $data;
-						 $log->debug( "pending operation: ".$data->{metadata}->{description} );
-						 $elf->{_pendings}->{ $data->{metadata}->{id} } = {
-						     operation => $data->{operation},
-						     future    => $f };
+					     } elsif ($resp->content_type =~ qr/multipart/) {
+#						 use File::Slurp;
+#						 write_file('/tmp/mime.txt', $resp->content);
+
+						 # use MIME::Parser;
+						 # my $parser = new MIME::Parser;
+						 # eval {
+						 #     my $entity = $parser->parse_data($msg);
+						 #     $entity->dump_skeleton;
+
+						 #     my %data;
+						 #     foreach my $p ($entity->parts) {
+						 # 	 my $dispo = $p->head->get('Content-Disposition');
+						 # 	 $dispo =~ /name="(.+?)"/;
+						 # 	 my $name = $1;
+						 # 	 if ($p->effective_type eq 'application/octet-stream') {
+						 # 	     $data{$name} = $p->body;
+						 # 	 } else {
+						 # 	     die;
+						 # 	 }
+						 #     }
+
+die "for now";
+						 $f->done("whatever");
+						 
+					     } elsif ($resp->content_type eq 'application/octet-stream') {
+						 $f->done( $resp->content,                                       # that would be the result, 
+							   $wantheaders ? $resp->headers : ());                  # and headers if required by the caller
+
+					     } else {
+						 $log->logdie( "unhandled content type: ".$resp->content_type );
 					     }
+
 					 } elsif (my $c = $resp->content) {
 					     my $data = from_json ($c);
 					     $f->fail( $data->{error} );
+
 					 } else {
 					     $f->fail( $resp->status_line );           # something happened on the transport level
 					 }
@@ -342,7 +508,50 @@ sub _generate_method {
     }
 }
 
+# sub _create_websockets {
+#     my $elf = shift;
+#     my $fds = shift;
+#     my $op  = shift;
+    
+#     my $HOST = "192.168.3.50";
+#     my $PORT = 8443;
 
+#     my @ws;
+#     foreach my $key (keys %$fds) {
+
+# 	use Net::Async::WebSocket::Client;
+# 	my $ws = Net::Async::WebSocket::Client->new(
+# 	    on_raw_frame => sub {
+# 		my ( $self, $frame ) = @_;
+# 		warn "XXXXXXXXXXXXXXXX recv $key $self $frame ";
+# warn Dumper $frame;
+# 	    },
+# 	    );
+# 	$elf->{loop}->add( $ws );
+# 	push @ws, $ws;
+
+# 	my $url = "wss://$HOST:$PORT".$op.'/websocket?secret='.$fds->{$key};
+# warn "ws $key $op -> $url";
+# 	$ws->connect(
+# 	    SSL_cert_file   => $elf->client_cert_file,
+# 	    SSL_key_file    => $elf->client_key_file,
+# 	    SSL_fingerprint => $elf->server_fingerprint,
+# 	    url => $url,
+# 	    on_connected => sub { warn "connected websocket $key"; });
+#     }
+#     return @ws;
+# }
+
+
+
+sub _substr {
+    my ($s, $l, $r) = @_;
+#warn "<<<$s<<< $l, $r";
+    return $s unless length($s) > $l;
+    substr($s, $l, 10000000, $r);
+#warn "   >>>$s<<<";
+    return $s;
+}
 
 # warn "###########";
 # for my $method ( $meta->get_all_methods ) {
@@ -369,11 +578,11 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
    my $loop = IO::Async::Loop->new;
 
    use Net::Async::WebService::lxd;
-   my $lxd = Net::Async::WebService::lxd->new( loop               => $loop,
-					       endpoint           => 'https://192.168.0.50:8443',
-					       client_cert_file   => "t/client.crt",
-					       client_key_file    => "t/client.key",
-					       server_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
+   my $lxd = Net::Async::WebService::lxd->new( loop            => $loop,
+					       endpoint        => 'https://192.168.0.50:8443',
+					       SSL_cert_file   => "t/client.crt",
+					       SSL_key_file    => "t/client.key",
+					       SSL_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
                                               );
    $lxd->create_instance(
 	    body => {
@@ -396,6 +605,11 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 =head1 INTERFACE
 
 =head2 Constructor
+
+SSL_
+
+environment???
+
 
 @@@@
 @@@@ environemtn endpoint, project ...
@@ -488,41 +702,6 @@ automatically be notified of progress on your bug as I make changes.
 
 Copyright 2022 Robert Barta.
 
-This program is free software; you can redistribute it and/or modify it
-under the terms of the the Artistic License (2.0). You may obtain a
-copy of the full license at:
-
-L<http://www.perlfoundation.org/artistic_license_2_0>
-
-Any use, modification, and distribution of the Standard or Modified
-Versions is governed by this Artistic License. By using, modifying or
-distributing the Package, you accept this license. Do not use, modify,
-or distribute the Package, if you do not accept this license.
-
-If your Modified Version has been derived from a Modified Version made
-by someone other than you, you are nevertheless required to ensure that
-your Modified Version complies with the requirements of this license.
-
-This license does not grant you the right to use any trademark, service
-mark, tradename, or logo of the Copyright Holder.
-
-This license includes the non-exclusive, worldwide, free-of-charge
-patent license to make, have made, use, offer to sell, sell, import and
-otherwise transfer the Package with respect to any patent claims
-licensable by the Copyright Holder that are necessarily infringed by the
-Package. If you institute patent litigation (including a cross-claim or
-counterclaim) against any party alleging that the Package constitutes
-direct or contributory patent infringement, then this Artistic License
-to you shall terminate on the date that such litigation is filed.
-
-Disclaimer of Warranty: THE PACKAGE IS PROVIDED BY THE COPYRIGHT HOLDER
-AND CONTRIBUTORS "AS IS' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES.
-THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE, OR NON-INFRINGEMENT ARE DISCLAIMED TO THE EXTENT PERMITTED BY
-YOUR LOCAL LAW. UNLESS REQUIRED BY LAW, NO COPYRIGHT HOLDER OR
-CONTRIBUTOR WILL BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, OR
-CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THE PACKAGE,
-EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 };
 print $pod;

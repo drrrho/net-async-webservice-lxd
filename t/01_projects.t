@@ -18,6 +18,24 @@ unless ($warn) {
 
 use constant DONE => 1;
 
+$ENV{LXD_ENDPOINT} = 'https://192.168.3.50:8443';
+unless ( $ENV{LXD_ENDPOINT} ) {
+    plan skip_all => 'no LXD_ENDPOINT defined in ENV';
+    exit;
+}
+
+my %SSL = map  { $_ => $ENV{$_} }
+          grep { $_ =~ /^SSL_/ }
+          keys %ENV;
+
+%SSL = (
+    SSL_cert_file   => "t/client.crt",
+    SSL_key_file    => "t/client.key",
+    SSL_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
+) unless %SSL;
+
+#== tests ========================================================
+
 require_ok( 'Net::Async::WebService::lxd' );
 
 use IO::Async::Loop;
@@ -25,11 +43,9 @@ my $loop = IO::Async::Loop->new;
 
 my @PROJECT = (); # (	project => 'test' );
 
-my $lxd = Net::Async::WebService::lxd->new( loop               => $loop,
-					    endpoint           => 'https://192.168.3.50:8443',
-					    client_cert_file   => "t/client.crt",
-					    client_key_file    => "t/client.key",
-					    server_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
+my $lxd = Net::Async::WebService::lxd->new( loop        => $loop,
+					    endpoint    => $ENV{LXD_ENDPOINT},
+					    %SSL,
 					    @PROJECT,
                                            );
 
