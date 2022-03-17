@@ -269,22 +269,30 @@ our $META; # association between methods and what is in the spec
 
 my %uniq_methods; # make sure we do not duplicate method by name
 foreach my $path ( keys %{ $rest_api->{paths} } ) {
-    my $op = $rest_api->{paths}->{ $path };
+    my $op          = $rest_api->{paths}->{ $path };
+    my @path_fields = $path =~ m/\{(.+?)\}/g;    # name, id, etc.
+
     
     if ($op->{get} && $op->{put}) { # possibly both can be mapped to ONE method
-	my %get_params = map  { $_->{name} => $_ }
-                         grep { $_->{in} eq 'query' }
-                         @{ $op->{get}->{parameters} };
-	my %put_params = map  { $_->{name} => $_ }
-                         grep { $_->{in} eq 'query' }
-                         @{ $op->{put}->{parameters} };
+	my %get_params  = map  { $_->{name} => $_ }
+                          grep { $_->{in} eq 'query' }
+                          @{ $op->{get}->{parameters} };
+	my %put_params  = map  { $_->{name} => $_ }
+                          grep { $_->{in} eq 'query' }
+                          @{ $op->{put}->{parameters} };
+	my %body_params = map  { $_->{name} => $_ }
+                          grep { $_->{in} eq 'body' }
+                          @{ $op->{put}->{parameters} };
 # TODO test params
 	my $opId = $op->{get}->{operationId}; $opId =~ s/_get//;
+#warn "$opId ".Dumper \%body_params;
 	$meta->add_method(  $opId => _generate_method( $path, $opId, \%get_params, $op->{get}, 'GET' ));
 	$META->{$opId} = { path   => $path,
 			   name   => $opId,
 			   opid   => [ $op->{get}->{operationId}, $op->{put}->{operationId} ],
 			   params => \%get_params,
+			   body   => \%body_params,
+			   fields => \@path_fields,
 			   op     => [ $op->{get}, $op->{put} ],
 			   tags   => $op->{get}->{tags},
 			   method => 'GETPUT' };
@@ -300,21 +308,27 @@ foreach my $path ( keys %{ $rest_api->{paths} } ) {
 			   name   => $opId,
 			   opid   => $op->{get}->{operationId},
 			   params => \%get_params,
+			   fields => \@path_fields,
 			   op     => $op,
 			   tags   => $op->{get}->{tags},
 			   method => 'GET' };
 	$uniq_methods{ $opId }++ and $log->logdie( "Internal error: duplicated $opId" );
 
     } elsif ($op->{put}) { # only PUT
-	my %put_params = map  { $_->{name} => $_ }
-                         grep { $_->{in} eq 'query' }
-                         @{ $op->{put}->{parameters} };
+	my %put_params  = map  { $_->{name} => $_ }
+                          grep { $_->{in} eq 'query' }
+                          @{ $op->{put}->{parameters} };
+	my %body_params = map  { $_->{name} => $_ }
+                          grep { $_->{in} eq 'body' }
+                          @{ $op->{put}->{parameters} };
 	my $opId = $op->{put}->{operationId}; $opId =~ s/(.+)_put/update_$1/;
 	$meta->add_method(  $opId => _generate_method( $path, $opId, \%put_params, $op->{put}, 'PUT') );
 	$META->{$opId} = { path   => $path,
 			   name   => $opId,
 			   opid   => $op->{put}->{operationId},
 			   params => \%put_params,
+			   body   => \%body_params,
+			   fields => \@path_fields,
 			   op     => $op,
 			   tags   => $op->{put}->{tags},
 			   method => 'PUT' };
@@ -327,6 +341,9 @@ foreach my $path ( keys %{ $rest_api->{paths} } ) {
 	my %post_params = map  { $_->{name} => $_ }
                           grep { $_->{in} eq 'query' }
                           @{ $op->{post}->{parameters} };
+	my %body_params = map  { $_->{name} => $_ }
+                          grep { $_->{in} eq 'body' }
+                          @{ $op->{post}->{parameters} };
 	my $opId = $POST_translations->{$op->{post}->{operationId}}
 	   or $log->logdie( "no post translation for $op->{post}->{operationId}" );
 #my $description = $op->{post}->{description}; $description =~ s/\n.+//s;
@@ -336,6 +353,8 @@ foreach my $path ( keys %{ $rest_api->{paths} } ) {
 			   name   => $opId,
 			   opid   => $op->{post}->{operationId},
 			   params => \%post_params,
+			   body   => \%body_params,
+			   fields => \@path_fields,
 			   op     => $op,
 			   tags   => $op->{post}->{tags},
 			   method => 'POST' };
@@ -353,14 +372,18 @@ foreach my $path ( keys %{ $rest_api->{paths} } ) {
 			   name   => $opId,
 			   opid   => $op->{delete}->{operationId},
 			   params => \%params,
+			   fields => \@path_fields,
 			   op     => $op,
 			   tags   => $op->{delete}->{tags},
 			   method => 'DELETE' };
 	$uniq_methods{ $opId }++ and $log->logdie( "Internal error: duplicated $opId" );
     }
     if ($op->{patch}) {
-	my %params = map  { $_->{name} => $_ }
+	my %params      = map  { $_->{name} => $_ }
                           grep { $_->{in} eq 'query' }
+                          @{ $op->{patch}->{parameters} };
+	my %body_params = map  { $_->{name} => $_ }
+                          grep { $_->{in} eq 'body' }
                           @{ $op->{patch}->{parameters} };
 	my $opId = $op->{patch}->{operationId}; $opId =~ s/(.+)_patch/modify_$1/;
 #my $description = $op->{post}->{description}; $description =~ s/\n.+//s;
@@ -370,6 +393,8 @@ foreach my $path ( keys %{ $rest_api->{paths} } ) {
 			   name   => $opId,
 			   opid   => $op->{patch}->{operationId},
 			   params => \%params,
+			   body   => \%body_params,
+			   fields => \@path_fields,
 			   op     => $op,
 			   tags   => $op->{patch}->{tags},
 			   method => 'PATCH' };
@@ -569,10 +594,12 @@ sub generate_pod {
     map { @{ $_->{tags} } } values %$META;
     my @tags = keys %tags;
 
+    use File::Slurp;
+
     my $pod = q{
 =head1 NAME
 
-Net::Async::WebService::lxd - REST client for lxd Linux containers
+Net::Async::WebService::lxd - REST client (asynchronous) for lxd Linux containers
 
 =head1 SYNOPSIS
 
@@ -585,15 +612,16 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 					       SSL_cert_file   => "t/client.crt",
 					       SSL_key_file    => "t/client.key",
 					       SSL_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
-                                              );
+                                               );
    $lxd->create_instance(
 	    body => {
 		architecture => 'x86_64',
 		profiles     => [ 'default'  ],
 		name         => 'test1',
-		source       => { 'type' => 'image', fingerprint => '6dc6aa7c8c00' },
+		source       => { type        => 'image',
+				  fingerprint => '6dc6aa7c8c00' },  # image already exists in image store
 		config       => {},
-	    } )->get;   # wait for it
+	    } )->get;                                               # wait for it
    # container is still stopped
    $lxd->instance_state( name => 'test1',
             body => {
@@ -601,24 +629,141 @@ Net::Async::WebService::lxd - REST client for lxd Linux containers
 		force    => JSON::false,
 		stateful => JSON::false,
 		timeout  => 30,
-	    } )->get;  # wait for it
+	    } )->get;                                               # wait for it
 
 
 =head1 INTERFACE
 
 =head2 Constructor
 
-SSL_
+The constructor returns a handle to one LXD server. It's address is specified via an B<endpoint>
+parameter, be it of an HTTPS or of a UNIX socket kind.
 
-environment???
+If you are working with a non-default LXD project in mind, then you should also provide that
+project's name with the B<project> parameter. Background operation polling will make use of
+that. Note, that when invoking any of the methods here, you will still have to specify that project,
+unless it is the C<default> one, of course.
+
+As we are operating under an L<IO::Async> regime here, the handle also needs a B<loop> parameter to
+the central event loop. The handle will also regularily poll autonomously the server which
+operations are still running or have completed. The optional parameter B<polling_time> controls how
+often that will occur; it will default to 1 sec, if not provided.
+
+As LXC can be accessed remotely only via HTTPS, TLS (SSL) parameters must be provided. These will be
+forwarded directly to
+L<IO::Socket::SSL|https://metacpan.org/pod/IO::Socket::SSL#Description-Of-Methods>. But, specifically,
+one should consider to provide:
+
+=over
+
+=item * B<client certificate>, via a proper subset of C<SSL_cert_file>, C<SSL_key_file>, C<SSL_cert> and C<SSL_key>.
+(Look at the L</HINTS> section to generate such a certificate for LXD.)
+
+=item * B<server fingerprint>, via C<SSL_fingerprint>
+(Look at the L</HINTS> section how to figure this out.)
+
+=back
+
+=head2 Methods
+
+All methods below are automatically generated from the L<LXD REST API Spec|https://raw.githubusercontent.com/lxc/lxd/master/doc/rest-api.yaml>.
+They should work with API version 1.0.
 
 
-@@@@
-@@@@ environemtn endpoint, project ...
+Let's dissect method invocations with this example:
+
+   my $f = $lxd->instance_state( name => 'test1' );
+   my $r = $f->get;
+
+=over
+
+=item *
+
+All invocations return a L<Future>. Thus they can be combined, sequenced, run in "parallel", etc. If
+you need to wait for a definite result, then you will block the flow with C<-E<gt>get>.
+
+Polling is done behind the scenes and will watch for all operations which either succeeded or
+failed. Those will mark the associated future as C<done> or C<failed>. Normally, you will never need
+to use the methods for 'Operations' yourself; they are still offered as fallback.
+
+=item *
+
+The result of each fully completed invocation is either
+
+=over
+
+=item *
+
+the string C<success>, or
+
+=item *
+
+a Perl HASH ref which reflects the JSON data sent from the LXD server. Note, that Booleans have to
+be treated special, by using C<JSON::false> and C<JSON::true>. Otherwise, they follow B<exactly> the
+structure in the specification.
+
+=item *
+
+or a HASH ref with keys C<stdin> and C<stdout> if this is a result of the C<execute_in_instance>
+method.
+
+=back
+
+=item *
+
+If an operation failed, then the associated future will be failed, together with the reason of the
+failure from the server. If you do not cater with that, then this will - as usual with C<IO::Async>
+- raise an exception, with the failure as string.
+
+=item *
+
+Methods named like the type of server object (e.g. C<cluster>, C<certificate>, C<image>) are
+normally "getter/setter" methods. The getter obviously returns the state of the object. The method
+becomes a setter, if the additional C<body> field together with a Perl HASH ref is passed:
+
+   my $f = $lxd->instance_state( name => 'test1',
+                                 body => {
+                                   action   => "start",
+				   force    => JSON::false,
+				   stateful => JSON::false,
+				   timeout  => 30,
+ 			         } );
+
+How a specific object is addressed, is detailed in each method below; usually you provide a C<name>,
+C<id>, C<fingerprint>, or similar. You may also have to provide a C<project>, if not being the
+I<default project>.
+
+That HASH ref also follows the structure outlined in the specification for that particular endpoint.
+
+=item *
+
+Methods named like a type of server object (e.g. C<certificates>) normally return a list of
+identifiers for such objects.
+
+=item *
+
+Many methods request changes in the LXD server. The names are taken from the specification, but are
+adapted to better reflect what is intended:
+
+=over
+
+=item *
+
+Methods which change the state of the remote object usually are called C<modify>_I<something>.
+
+=item *
+
+Methods which add a new object to a collection are usually called C<add>_I<something>, or
+C<create>_I<something>, depending on how it sounds better.
+
+=item *
+
+Methods which remove an object from a collection are usually called C<delete>_I<something>.
+
+=back
+
 
 };
-
-    $pod .= "# automatically generated from the Swagger spec at https://raw.githubusercontent.com/lxc/lxd/master/doc/rest-api.yaml\n\n";
 
     foreach my $tag (sort @tags) {
 	my $Tag = ucfirst( $tag );
@@ -658,6 +803,11 @@ $log->debug( "YYYY $method->{opid}  ".Dumper $method) unless $method->{opid};
 	    $pod .= q{=over
 
 };
+	    foreach my $p (sort @{ $method->{fields} }) {
+		$pod .= qq{=item C<$p>: string, required
+
+};
+	    }
 	    foreach my $p (sort keys %{ $method->{params} }) {
 #		my $params = ref($method->{op}) eq 'ARRAY' ? $method->{op}->[1]->{parameters} : $method->{op}->{parameters};
 #$pod .= Dumper $params;
@@ -667,21 +817,58 @@ $log->debug( "YYYY $method->{opid}  ".Dumper $method) unless $method->{opid};
 
 };
 	    }
-#$pod .= ' >>>> ' .Dumper $method;
-	    foreach my $m ( $method->{path} =~ /\{(.+?)\}/g ) {
-#$pod .= ' >>>> '.Dumper \@matches;
-		$pod .= qq{=item C<$m>: string (inside URL)
+#warn "xxxx".Dumper $method->{body};
+	    foreach my $p (sort keys %{ $method->{body} }) {
+#warn "\\_ $p";
+#		my $params = ref($method->{op}) eq 'ARRAY' ? $method->{op}->[1]->{parameters} : $method->{op}->{parameters};
+#$pod .= Dumper $params;
+		my $docp = $method->{body}->{$p};
+#warn "\\_ ".Dumper $docp;
+#$pod .= Dumper $docp;
+		$pod .= qq{=item C<body>: $p};
+                $pod .= ', ' . ($docp->{required} ? "required" : "optional");
+                if ($docp->{type}) {
+		    $pod .= ", ".$docp->{type};
+		} elsif ($docp->{schema}) {
+		    if (my $s = $docp->{schema}->{'$ref'}) {
+			$s =~ s{\#/definitions/}{};
 
-};
+sub _format_yaml_pod {
+    my $h = shift;
+    use YAML qw(Dump);
+    return
+	"\n\n"
+#        ."=begin text\n"
+	.( join "\n",
+	  map { "   $_" }
+          grep { $_ !~ /x-go-/ }
+          grep { $_ !~ /---/ }
+          split /\n/,
+          Dump ($h)
+        )
+#	."\n=end text\n"
+        ;
+}
+
+			$pod .= _format_yaml_pod( $rest_api->{definitions}->{$s} );
+		    } else {
+			$pod .= _format_yaml_pod( $docp->{schema} );
+		    }
+		} else {
+		    $pod .= "see Spec";
+		}
+                $pod .= "\n\n";
 	    }
 
 	    $pod .= q{
+
 =back
 
 };
 	}
     
 	$pod .= q{
+
 =back
 
 };
@@ -690,22 +877,102 @@ $log->debug( "YYYY $method->{opid}  ".Dumper $method) unless $method->{opid};
 
     $pod .= q{
 
+=head1 PSEUDO OBJECT ORIENTATION
+
+Just for the sake of experimentation, I added a sub-package C<lxd::instance>. To add OO-flavour, you
+simply bless the instance HASH with it:
+
+    my $r = $lxd->instance( name => "my-container" )->get;
+    my $i = bless $r, 'lxd::instance';
+
+From then on, the following methods can operate on it:
+
+=over
+
+=item * C<restart>
+
+=item * C<start>
+
+=item * C<freeze>
+
+=item * C<unfreeze>
+
+=item * C<stop>
+
+=item * C<state>
+
+=back
+
+Well, I'm not a big fan of objects.
+
+
+=head1 EXAMPLES
+
+I encourage you to look at the C<02_instances.t> test suite. It will show a complete life cycle for
+containers.
+
+=head1 SEE ALSO
+
+=over
+
+=item * L<Linux::LXC>
+
+uses actually the existing lxc client to get the information
+
+=item * L<https://github.com/jipipayo/Linux-REST-LXD>
+
+pretty old, never persued
+
+=back
+
+
+=head1 HINTS
+
+=over
+
+=item * How to generate an SSL client certificate for LXD
+
+First, I found one client certificate (plus the key) in my installation at:
+
+   /root/snap/lxd/common/config/
+
+Alternatively, L<you can run your own small CA, generate a .crt and .key for a client, and then
+add it to lxd to trust it|https://serverfault.com/questions/882880/authenticate-to-lxd-rest-api-over-network-certificate-auth-keeps-failing>.
+
+More on this topic is L<here|https://linuxcontainers.org/lxd/docs/master/authentication/>
+
+=item * How to find the SSL fingerprint for an LXD server
+
+With recent versions of LXD this is fairly easy:
+
+   $ lxc info|grep fingerprint
+
+It is a SHA265 hash, so you will have to prefix it with C<sha256$> (no blanks) when you pass it to C<SSL_fingerprint>.
+
+Alternatively, you can try to find the server certificate and use C<openssl> to derive a fingerprint of your choice.
+
+=back
+
+=head1 ISSUES
+
+Open issues are probably best put onto L<Github|https://github.com/drrrho/net-async-webservice-lxd>
+
 =head1 AUTHOR
 
 Robert Barta, C<< <rho at devc.at> >>
 
-=head1 BUGS
+=head1 CREDITS
 
-Please report any bugs or feature requests to C<bug-net-async-webservice-lxd at rt.cpan.org>, or through
-the web interface at L<https://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-Async-WebService-lxd>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
+L<IO::Async>, L<Net::Async::HTTP>, L<IO::Socket::SSL> and friends are amazing.
 
 =head1 LICENSE AND COPYRIGHT
 
 Copyright 2022 Robert Barta.
 
-
-};
+}
+.
+read_file("LICENSE")
+;
 print $pod;
 }
 
