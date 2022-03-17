@@ -11,7 +11,7 @@ my $debian = Module::Build->subclass(
     code => <<'SUBCLASS' );
 
 sub DEBVERSION {
-    return 1;
+    return 2;
 }
 
 sub ACTION_cpan_upload {
@@ -54,7 +54,7 @@ sub ACTION_inject {
     my $version = $self->dist_version;
     my $debversion = $self->DEBVERSION;
     $self->do_system(qq{ scp libnet-async-webservice-lxd-perl_${version}-${debversion}_all.deb packages.devc.at:packages/ } );
-    foreach (qw(stretch) ) { # squeeze wheezy jessie 
+    foreach (qw(stretch buster bullseye) ) { # squeeze wheezy jessie 
         $self->do_system(qq{ ssh packages.devc.at -Y -t reprepro --ask-passphrase -b /var/www/packages/data/dists/ includedeb $_ packages/libnet-async-webservice-lxd-perl_${version}-${debversion}_all.deb });
     }
 }
