@@ -762,6 +762,7 @@ Methods which remove an object from a collection are usually called C<delete>_I<
 
 =back
 
+=back
 
 };
 
