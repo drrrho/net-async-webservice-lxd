@@ -18,7 +18,7 @@ unless ($warn) {
 
 use constant DONE => 1;
 
-$ENV{LXD_ENDPOINT} = 'https://192.168.3.50:8443';
+# $ENV{LXD_ENDPOINT} = 'https://192.168.3.50:8443';
 unless ( $ENV{LXD_ENDPOINT} ) {
     plan skip_all => 'no LXD_ENDPOINT defined in ENV';
     exit;
@@ -31,7 +31,8 @@ my %SSL = map  { $_ => $ENV{$_} }
 %SSL = (
     SSL_cert_file   => "t/client.crt",
     SSL_key_file    => "t/client.key",
-    SSL_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
+#    SSL_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
+    SSL_fingerprint => 'sha256$7c263bae0e60802337233c7ff8edf3140ab5bdad968b71bff879322adee03e80',
 ) unless %SSL;
 
 #== tests ========================================================

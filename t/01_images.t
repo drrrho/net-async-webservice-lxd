@@ -24,7 +24,7 @@ $Net::Async::WebService::lxd::log->level($warn ? $DEBUG : $ERROR); # one of DEBU
 
 use constant DONE => 1;
 
-$ENV{LXD_ENDPOINT} = 'https://192.168.3.50:8443';
+# $ENV{LXD_ENDPOINT} = 'https://192.168.3.50:8443';
 unless ( $ENV{LXD_ENDPOINT} ) {
     plan skip_all => 'no LXD_ENDPOINT defined in ENV';
     exit;
