@@ -145,10 +145,12 @@ sub BUILD {
 				       filename => $logfile,
 				       )->get;
 			       }
+			   } elsif ($op->{metadata}) {
+			       $res = $op->{metadata};                                     # not sure whether we ever arrive here
 			   } else {
 			       $res = 'success';                                           # boring
 			   }
-			   $pendings->{ $op->{id} }->{future}->done( $res );
+			   $pendings->{ $op->{id} }->{future}->done( $res );               # now it's done
 
 		       } elsif ($op->{status} eq 'Failure') {
 			   $pendings->{ $op->{id} }->{future}->fail( $op->{err} );
