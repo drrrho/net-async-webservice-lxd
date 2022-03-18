@@ -21,8 +21,14 @@ use constant DONE => 1;
 # $ENV{LXD_ENDPOINT} = 'https://192.168.3.50:8443';
 unless ( $ENV{LXD_ENDPOINT} ) {
     plan skip_all => 'no LXD_ENDPOINT defined in ENV';
-    exit;
+    done_testing; exit;
 }
+
+use Net::Async::WebService::lxd;
+
+no  warnings 'once';
+use Log::Log4perl::Level;
+$Net::Async::WebService::lxd::log->level($warn ? $DEBUG : $ERROR); # one of DEBUG, INFO, WARN, ERROR, FATAL
 
 my %SSL = map  { $_ => $ENV{$_} }
           grep { $_ =~ /^SSL_/ }
@@ -37,7 +43,6 @@ my %SSL = map  { $_ => $ENV{$_} }
 
 #== tests ========================================================
 
-require_ok( 'Net::Async::WebService::lxd' );
 
 use IO::Async::Loop;
 my $loop = IO::Async::Loop->new;

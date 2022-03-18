@@ -16,19 +16,19 @@ unless ($warn) {
     select (STDERR); $| = 1;
 }
 
-require_ok( 'Net::Async::WebService::lxd' );
-
-no  warnings 'once';
-use Log::Log4perl::Level;
-$Net::Async::WebService::lxd::log->level($warn ? $DEBUG : $ERROR); # one of DEBUG, INFO, WARN, ERROR, FATAL
-
 use constant DONE => 1;
 
 # $ENV{LXD_ENDPOINT} = 'https://192.168.3.50:8443';
 unless ( $ENV{LXD_ENDPOINT} ) {
     plan skip_all => 'no LXD_ENDPOINT defined in ENV';
-    exit;
+    done_testing; exit;
 }
+
+use Net::Async::WebService::lxd;
+
+no  warnings 'once';
+use Log::Log4perl::Level;
+$Net::Async::WebService::lxd::log->level($warn ? $DEBUG : $ERROR); # one of DEBUG, INFO, WARN, ERROR, FATAL
 
 sub _setup_dir {
     use File::Temp;
@@ -96,7 +96,6 @@ if (DONE) {
 	} );
     isa_ok( $f, 'Future', $AGENDA.'future creation' );
     is( $f->get, 'success', $AGENDA.'created');
-
 #--
     my @is = @{ $lxd->images( @PROJECT )->get };
     ok((scalar @is) == 1, $AGENDA.'list 1 image');

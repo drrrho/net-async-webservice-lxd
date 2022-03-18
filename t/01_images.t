@@ -16,19 +16,19 @@ unless ($warn) {
     select (STDERR); $| = 1;
 }
 
-require_ok( 'Net::Async::WebService::lxd' );
-
-no  warnings 'once';
-use Log::Log4perl::Level;
-$Net::Async::WebService::lxd::log->level($warn ? $DEBUG : $ERROR); # one of DEBUG, INFO, WARN, ERROR, FATAL
-
 use constant DONE => 1;
 
 # $ENV{LXD_ENDPOINT} = 'https://192.168.3.50:8443';
 unless ( $ENV{LXD_ENDPOINT} ) {
     plan skip_all => 'no LXD_ENDPOINT defined in ENV';
-    exit;
+    done_testing; exit;
 }
+
+use Net::Async::WebService::lxd;
+
+no  warnings 'once';
+use Log::Log4perl::Level;
+$Net::Async::WebService::lxd::log->level($warn ? $DEBUG : $ERROR); # one of DEBUG, INFO, WARN, ERROR, FATAL
 
 my %SSL = map  { $_ => $ENV{$_} }
           grep { $_ =~ /^SSL_/ }
@@ -84,7 +84,8 @@ if (DONE) {
     isa_ok($f, 'Future', $AGENDA.'image creation initiated');
 
     my $r = $f->get;
-    is($r, 'success', $AGENDA.'image creation finished');
+#warn Dumper $r;
+    is( $r, 'success', $AGENDA.'image creation finished');
 #--
     my @is = @{ $lxd->images( @PROJECT )->get };
     ok((scalar @is) == 1, $AGENDA.'list 1 image');
@@ -149,7 +150,7 @@ if (DONE) {
 #warn "after modify ".Dumper $i;
 #--
     $r = $lxd->update_images_refresh( @PROJECT, fingerprint => $fi )->get;
-    is($r, 'success', $AGENDA.'image refresh finished');
+    is( $r, 'success', $AGENDA.'image refresh finished');
 #--
     if (0) { # TO BE DONE
 	$f = $lxd->image_export( @PROJECT, fingerprint => $fi );
@@ -160,7 +161,8 @@ warn Dumper $r;
     $f = $lxd->delete_image( @PROJECT, fingerprint => $fi );
     isa_ok($f, 'Future', $AGENDA.'image deletion initiated');
     $r = $f->get;
-    is($r, 'success', $AGENDA.'image deletion finished');
+#warn Dumper $r;
+    is( $r, 'success', $AGENDA.'image deletion finished');
 }
 
 $lxd->delete_project( name => $PROJECT[1] )->get;
