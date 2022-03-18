@@ -64,7 +64,7 @@ use warnings;
 use Data::Dumper;
 $Data::Dumper::Indent = 1;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Encode qw(encode_utf8);
 use JSON;
