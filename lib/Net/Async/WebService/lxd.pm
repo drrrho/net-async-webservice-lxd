@@ -145,8 +145,8 @@ sub BUILD {
 				       filename => $logfile,
 				       )->get;
 			       }
-			   } elsif ($op->{metadata}) {
-			       $res = $op->{metadata};                                     # not sure whether we ever arrive here
+#			   } elsif ($op->{metadata} && scalar %{ $op->{metadata} }) {      # if there is something interesting here
+#			       $res = $op->{metadata};                                     # not sure whether we ever arrive here
 			   } else {
 			       $res = 'success';                                           # boring
 			   }
