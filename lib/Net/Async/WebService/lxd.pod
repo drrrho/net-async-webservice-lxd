@@ -51,7 +51,7 @@ the central event loop. The handle will also regularily poll autonomously the se
 operations are still running or have completed. The optional parameter B<polling_time> controls how
 often that will occur; it will default to 1 sec, if not provided.
 
-As LXC can be accessed remotely only via HTTPS, TLS (SSL) parameters must be provided. These will be
+As LXD can be accessed remotely only via HTTPS, TLS (SSL) parameters must be provided. These will be
 forwarded directly to
 L<IO::Socket::SSL|https://metacpan.org/pod/IO::Socket::SSL#Description-Of-Methods>. But, specifically,
 one should consider to provide:
@@ -114,8 +114,8 @@ method.
 =item *
 
 If an operation failed, then the associated future will be failed, together with the reason of the
-failure from the server. If you do not cater with that, then this will - as usual with C<IO::Async>
-- raise an exception, with the failure as string.
+failure from the server. If you do not cater with that, then this will - as usual with C<IO::Async> -
+raise an exception, with the failure as string.
 
 =item *
 
@@ -131,16 +131,16 @@ becomes a setter, if the additional C<body> field together with a Perl HASH ref 
 				   timeout  => 30,
  			         } );
 
+That HASH ref also follows the structure outlined in the specification for that particular endpoint.
+
 How a specific object is addressed, is detailed in each method below; usually you provide a C<name>,
 C<id>, C<fingerprint>, or similar. You may also have to provide a C<project>, if not being the
 I<default project>.
 
-That HASH ref also follows the structure outlined in the specification for that particular endpoint.
-
 =item *
 
-Methods named like a type of server object (e.g. C<certificates>) normally return a list of
-identifiers for such objects.
+Methods named like a plural of type of server object (e.g. C<certificates>) normally return a list
+of identifiers for such objects.
 
 =item *
 
@@ -5350,7 +5350,7 @@ With recent versions of LXD this is fairly easy:
 
    $ lxc info|grep fingerprint
 
-It is a SHA265 hash, so you will have to prefix it with C<sha256$> (no blanks) when you pass it to C<SSL_fingerprint>.
+It is a SHA256 hash, so you will have to prefix it with C<sha256$> (no blanks) when you pass it to C<SSL_fingerprint>.
 
 Alternatively, you can try to find the server certificate and use C<openssl> to derive a fingerprint of your choice.
 

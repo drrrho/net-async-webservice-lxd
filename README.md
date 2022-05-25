@@ -44,12 +44,12 @@ project's name with the **project** parameter. Background operation polling will
 that. Note, that when invoking any of the methods here, you will still have to specify that project,
 unless it is the `default` one, of course.
 
-As we are operating under an [IO::Async](https://metacpan.org/pod/IO::Async) regime here, the handle also needs a **loop** parameter to
+As we are operating under an [IO::Async](https://metacpan.org/pod/IO%3A%3AAsync) regime here, the handle also needs a **loop** parameter to
 the central event loop. The handle will also regularily poll autonomously the server which
 operations are still running or have completed. The optional parameter **polling\_time** controls how
 often that will occur; it will default to 1 sec, if not provided.
 
-As LXC can be accessed remotely only via HTTPS, TLS (SSL) parameters must be provided. These will be
+As LXD can be accessed remotely only via HTTPS, TLS (SSL) parameters must be provided. These will be
 forwarded directly to
 [IO::Socket::SSL](https://metacpan.org/pod/IO::Socket::SSL#Description-Of-Methods). But, specifically,
 one should consider to provide:
@@ -84,8 +84,8 @@ you need to wait for a definite result, then you will block the flow with `->get
     - or a HASH ref with keys `stdin` and `stdout` if this is a result of the `execute_in_instance`
     method.
 - If an operation failed, then the associated future will be failed, together with the reason of the
-failure from the server. If you do not cater with that, then this will - as usual with `IO::Async`
-- raise an exception, with the failure as string.
+failure from the server. If you do not cater with that, then this will - as usual with `IO::Async` -
+raise an exception, with the failure as string.
 - Methods named like the type of server object (e.g. `cluster`, `certificate`, `image`) are
 normally "getter/setter" methods. The getter obviously returns the state of the object. The method
 becomes a setter, if the additional `body` field together with a Perl HASH ref is passed:
@@ -98,14 +98,14 @@ becomes a setter, if the additional `body` field together with a Perl HASH ref i
                                         timeout  => 30,
                                       } );
 
+    That HASH ref also follows the structure outlined in the specification for that particular endpoint.
+
     How a specific object is addressed, is detailed in each method below; usually you provide a `name`,
     `id`, `fingerprint`, or similar. You may also have to provide a `project`, if not being the
     _default project_.
 
-    That HASH ref also follows the structure outlined in the specification for that particular endpoint.
-
-- Methods named like a type of server object (e.g. `certificates`) normally return a list of
-identifiers for such objects.
+- Methods named like a plural of type of server object (e.g. `certificates`) normally return a list
+of identifiers for such objects.
 - Many methods request changes in the LXD server. The names are taken from the specification, but are
 adapted to better reflect what is intended:
     - Methods which change the state of the remote object usually are called `modify`\__something_.
@@ -3661,7 +3661,7 @@ containers.
 
 # SEE ALSO
 
-- [Linux::LXC](https://metacpan.org/pod/Linux::LXC)
+- [Linux::LXC](https://metacpan.org/pod/Linux%3A%3ALXC)
 
     uses actually the existing lxc client to get the information
 
@@ -3688,7 +3688,7 @@ containers.
 
         $ lxc info|grep fingerprint
 
-    It is a SHA265 hash, so you will have to prefix it with `sha256$` (no blanks) when you pass it to `SSL_fingerprint`.
+    It is a SHA256 hash, so you will have to prefix it with `sha256$` (no blanks) when you pass it to `SSL_fingerprint`.
 
     Alternatively, you can try to find the server certificate and use `openssl` to derive a fingerprint of your choice.
 
@@ -3702,7 +3702,7 @@ Robert Barta, `<rho at devc.at>`
 
 # CREDITS
 
-[IO::Async](https://metacpan.org/pod/IO::Async), [Net::Async::HTTP](https://metacpan.org/pod/Net::Async::HTTP), [IO::Socket::SSL](https://metacpan.org/pod/IO::Socket::SSL) and friends are amazing.
+[IO::Async](https://metacpan.org/pod/IO%3A%3AAsync), [Net::Async::HTTP](https://metacpan.org/pod/Net%3A%3AAsync%3A%3AHTTP), [IO::Socket::SSL](https://metacpan.org/pod/IO%3A%3ASocket%3A%3ASSL) and friends are amazing.
 
 # LICENSE AND COPYRIGHT
 

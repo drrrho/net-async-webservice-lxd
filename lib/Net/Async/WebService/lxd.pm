@@ -64,7 +64,7 @@ use warnings;
 use Data::Dumper;
 $Data::Dumper::Indent = 1;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Encode qw(encode_utf8);
 use JSON;
@@ -153,7 +153,7 @@ sub BUILD {
 			   $pendings->{ $op->{id} }->{future}->done( $res );               # now it's done
 
 		       } elsif ($op->{status} eq 'Failure') {
-			   $pendings->{ $op->{id} }->{future}->fail( $op->{err} );
+			   $pendings->{ $op->{id} }->{future}->fail( $op->{err}, $pendings->{ $op->{id} }->{options} );
 
 		       } else {
 			   $log->die("we should not be here");
@@ -416,6 +416,7 @@ sub _generate_method {
     return sub {
 	my $elf = shift;
 	my %options = @_;
+	my %orig_options = %options;                                                                             # copy it,  as we may need to capture this in pending operations
 #warn "sub options".Dumper \%options;
 
 	my $fullpath = $path;
@@ -429,15 +430,15 @@ sub _generate_method {
 	use URI;
 	my $uri = URI->new( $elf->{endpoint} . $fullpath );
 #warn ">>> uri $uri";
-	$uri->query_form( $uri->query_form,                           # if we already have params (it happens)
-			                                              # add _query_ params we received
+	$uri->query_form( $uri->query_form,                                                                       # if we already have params (it happens)
+			                                                                                          # add _query_ params we received
 			      map  { $_ => $options{$_} }
-			      grep { $params->{$_} or $_ eq 'recursion' } # allow also any recursion
-			      grep { $_ ne 'body' }     # body param does not go into the uri
+			      grep { $params->{$_} or $_ eq 'recursion' }                                         # allow also any recursion
+			      grep { $_ ne 'body' }                                                               # body param does not go into the uri
 			      keys %options
 			   );
 
-	my $req = HTTP::Request->new( ($options{body} && $method eq 'GET' ? 'PUT' : $method),
+	my $req = HTTP::Request->new( ($options{body} && $method eq 'GET' ? 'PUT' : $method),                     # basic request, will be refined below
 				      $uri );
 
 	$options{headers}->{'Content-Type'} //= 'application/json; charset=UTF-8';                                # if none is given, we assume that JSON is meant
@@ -474,7 +475,7 @@ sub _generate_method {
 							 $f->done( ($data->{metadata} // lc($data->{status})),    # that would be the result
 								   ($wantheaders ? $resp->headers : ()));         # and headers if required by the caller
 						     } else {
-							 $f->fail( $data->{error} );                              # lxd sent an error
+							 $f->fail( $data->{error}, \%orig_options );              # lxd sent an error (and we add the calling params)
 						     }
 						 } else {                                                         # the only other option: we are not finished on the lxd server
 #warn "not sync response ".Dumper $data;
@@ -486,10 +487,12 @@ sub _generate_method {
 						     $elf->{_pendings}->{ $data->{metadata}->{id} } = {
 							 operation => $data->{operation},
 							 future    => $f,
+							 options   => \%orig_options,                             # we most likely want to know at some point WHAT we planned to do
 #							 websockets => \@ws,
 						     };
 						 }
 					     } elsif ($resp->content_type =~ qr/multipart/) {
+die "for now"; # FIX ME
 #						 use File::Slurp;
 #						 write_file('/tmp/mime.txt', $resp->content);
 
@@ -511,7 +514,6 @@ sub _generate_method {
 						 # 	 }
 						 #     }
 
-die "for now";
 						 $f->done("whatever");
 						 
 					     } elsif ($resp->content_type eq 'application/octet-stream') {
@@ -524,10 +526,10 @@ die "for now";
 
 					 } elsif (my $c = $resp->content) {
 					     my $data = from_json ($c);
-					     $f->fail( $data->{error} );
+					     $f->fail( $data->{error}, \%orig_options );
 
 					 } else {
-					     $f->fail( $resp->status_line );           # something happened on the transport level
+					     $f->fail( $resp->status_line, \%orig_options );                     # something happened on the transport level
 					 }
 				   },
 	                        );
@@ -649,7 +651,7 @@ the central event loop. The handle will also regularily poll autonomously the se
 operations are still running or have completed. The optional parameter B<polling_time> controls how
 often that will occur; it will default to 1 sec, if not provided.
 
-As LXC can be accessed remotely only via HTTPS, TLS (SSL) parameters must be provided. These will be
+As LXD can be accessed remotely only via HTTPS, TLS (SSL) parameters must be provided. These will be
 forwarded directly to
 L<IO::Socket::SSL|https://metacpan.org/pod/IO::Socket::SSL#Description-Of-Methods>. But, specifically,
 one should consider to provide:
@@ -712,8 +714,8 @@ method.
 =item *
 
 If an operation failed, then the associated future will be failed, together with the reason of the
-failure from the server. If you do not cater with that, then this will - as usual with C<IO::Async>
-- raise an exception, with the failure as string.
+failure from the server. If you do not cater with that, then this will - as usual with C<IO::Async> -
+raise an exception, with the failure as string.
 
 =item *
 
@@ -729,16 +731,16 @@ becomes a setter, if the additional C<body> field together with a Perl HASH ref 
 				   timeout  => 30,
  			         } );
 
+That HASH ref also follows the structure outlined in the specification for that particular endpoint.
+
 How a specific object is addressed, is detailed in each method below; usually you provide a C<name>,
 C<id>, C<fingerprint>, or similar. You may also have to provide a C<project>, if not being the
 I<default project>.
 
-That HASH ref also follows the structure outlined in the specification for that particular endpoint.
-
 =item *
 
-Methods named like a type of server object (e.g. C<certificates>) normally return a list of
-identifiers for such objects.
+Methods named like a plural of type of server object (e.g. C<certificates>) normally return a list
+of identifiers for such objects.
 
 =item *
 
@@ -948,7 +950,7 @@ With recent versions of LXD this is fairly easy:
 
    $ lxc info|grep fingerprint
 
-It is a SHA265 hash, so you will have to prefix it with C<sha256$> (no blanks) when you pass it to C<SSL_fingerprint>.
+It is a SHA256 hash, so you will have to prefix it with C<sha256$> (no blanks) when you pass it to C<SSL_fingerprint>.
 
 Alternatively, you can try to find the server certificate and use C<openssl> to derive a fingerprint of your choice.
 
