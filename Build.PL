@@ -3,7 +3,7 @@ use warnings;
 use Module::Build;
 
 
-$ENV{'PERL_MB_OPT'} = '--install-base=/usr'; # I could not make this work via the parameters below :/
+# $ENV{'PERL_MB_OPT'} = '--install-base=/usr'; # I could not make this work via the parameters below :/
 $ENV{'DEB_BUILD_OPTIONS'}='nocheck';
 
 my $debian = Module::Build->subclass(
@@ -11,12 +11,13 @@ my $debian = Module::Build->subclass(
     code => <<'SUBCLASS' );
 
 sub DEBVERSION {
-    return 2;
+    return 1;
 }
 
 sub ACTION_cpan_upload {
     my $self = shift;
 
+    $self->depends_on("distdir");
     $self->depends_on("dist");
     my $version = $self->dist_version;
     $self->do_system(qq{   cpan-upload Net-Async-WebService-lxd-${version}.tar.gz } );
@@ -39,6 +40,7 @@ sub ACTION_debian {
     my $self = shift;
 
     $self->depends_on("README");
+    $self->depends_on("dist");
     $self->depends_on("distdir");
 
     my $version = $self->dist_version;
@@ -66,6 +68,7 @@ my $builder = $debian->new(
     dist_author         => q{Robert Barta <rho@devc.at>},
     dist_version_from   => 'lib/Net/Async/WebService/lxd.pm',
     release_status      => 'stable',
+    install_path        => {lib  => '/usr/share/perl5', },
     configure_requires => {
         'Module::Build' => '0',
     },
