@@ -1,5 +1,15 @@
 Revision history for Net::Async::WebService::lxd
 
+0.05 Tue 20 Sep 2022 03:29:52 PM CEST
+        - more robust when lxd server goes away or other connection problems
+        - added stress to test suite
+        - _http client now passes on headers, etc to dispatched requests
+	- added dependencies
+
+0.04 Sun 17 Jul 2022 12:03:01 PM CEST
+	- added timeout attribute to limit http wait
+	! moved automatic Log4Perl configuration to outside of ::lxd (see test suites)
+
 0.03    Wed 25 May 2022 05:14:44 PM CEST
 	- moved install_path to /usr/share/perl5 (default for apt systems)
 

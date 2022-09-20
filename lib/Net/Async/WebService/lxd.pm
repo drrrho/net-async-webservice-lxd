@@ -64,26 +64,22 @@ use warnings;
 use Data::Dumper;
 $Data::Dumper::Indent = 1;
 
-our $VERSION = '0.03';
+our $VERSION = '0.05';
 
 use Encode qw(encode_utf8);
 use JSON;
 use HTTP::Status qw(:constants);
 
+our $log; # will be set with the first object, or from the outset
+
 use Moose;
-
-
-use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($DEBUG);
-no warnings 'once';
-our $log = Log::Log4perl->get_logger("nawl");
-
 
 has 'loop'                 => (isa => 'IO::Async::Loop',     is => 'ro' );
 has '_http'                => (isa => 'Net::Async::HTTP',    is => 'ro' );
 has 'endpoint'             => (isa => 'Str',	             is => 'ro' );
 has '_SSL_'                => (isa => 'HashRef', default => sub { {} }, is => 'rw');
 has 'polling_time'         => (isa => 'Int', default => 1,   is => 'rw' );
+has 'timeout'              => (isa => 'Int', default => 10,  is => 'rw' );
 has '_timer'               => (isa => 'IO::Async::Timer::Periodic', is => 'ro' );
 has '_pendings'            => (isa => 'HashRef', default => sub { {} }, is => 'rw');
 
@@ -104,16 +100,22 @@ around BUILDARGS => sub {
 };
 
 
+
+
 sub BUILD {
     my $elf = shift;
-    
+
+    use Log::Log4perl;
+    $log //= Log::Log4perl->get_logger("naw::lxd");  # maybe it has not been set before
+
     use Net::Async::HTTP;
     my $http = Net::Async::HTTP->new(
-	%{ $elf->{'_SSL_'} }                      # expand all SSL related options
+	%{ $elf->{'_SSL_'} },                     # expand all SSL related options
+	timeout => $elf->timeout,                 # it has a default value, so is always defined
 	);
 #-- add http resolver
     $elf->{loop}->add( $http );
-    $elf->{_http} = $http; # keep it handy
+    $elf->{_http} = $http;                        # keep it handy
 #-- add timer for background operation
     use IO::Async::Timer::Periodic;
     my $timer = IO::Async::Timer::Periodic->new(
@@ -460,10 +462,19 @@ sub _generate_method {
 	    }
 	}
 
+	$elf->{_http}->prepare_request( $req ); # add anything which is configure for the http client
+
+#warn $req->as_string ;
 	$log->debug( ">>> "._substr($req->as_string, 2000, '...') );
+
 
 	my $f = $elf->{loop}->new_future;
 	$elf->{_http}->do_request( request => $req,
+				   on_error => sub {
+				       my ($message, $resp, $req) = @_;
+#warn "lxd http on_error => fail $message";
+				       $f->fail( $message, \%orig_options );
+				   },
 				   on_response => sub {
 					 my $resp = $_[0];
 					 $log->debug( "<<< "._substr($resp->as_string, 2000, '...') );
@@ -526,6 +537,7 @@ die "for now"; # FIX ME
 
 					 } elsif (my $c = $resp->content) {
 					     my $data = from_json ($c);
+#warn "no success ".Dumper $data;
 					     $f->fail( $data->{error}, \%orig_options );
 
 					 } else {
@@ -953,6 +965,14 @@ With recent versions of LXD this is fairly easy:
 It is a SHA256 hash, so you will have to prefix it with C<sha256$> (no blanks) when you pass it to C<SSL_fingerprint>.
 
 Alternatively, you can try to find the server certificate and use C<openssl> to derive a fingerprint of your choice.
+
+=item * How to add/modify specific HTTP modalities (proxy, connection pooling, ...)
+
+The property C<_http> holds the async HTTP client of class L<Net::Async::HTTP>. That way you can reconfigure it via
+
+   $lxd->_http->configure(user_agent => "My Client");
+   $lxd->_http->configure( +headers => { One_More => "Key" } );
+
 
 =back
 

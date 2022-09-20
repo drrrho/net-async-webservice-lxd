@@ -9,6 +9,7 @@ t/manifest.t
 t/01_projects.t
 t/01_images.t
 t/02_instances.t
+t/03_stress.t
 t/client.crt
 t/client.key
 META.yml

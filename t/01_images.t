@@ -24,11 +24,21 @@ unless ( $ENV{LXD_ENDPOINT} ) {
     done_testing; exit;
 }
 
-use Net::Async::WebService::lxd;
-
 no  warnings 'once';
-use Log::Log4perl::Level;
-$Net::Async::WebService::lxd::log->level($warn ? $DEBUG : $ERROR); # one of DEBUG, INFO, WARN, ERROR, FATAL
+use Log::Log4perl qw(:levels);
+Log::Log4perl::init( \ q(
+
+log4perl.category = DEBUG, Screen
+log4perl.appender.Screen        = Log::Log4perl::Appender::ScreenColoredLevels
+log4perl.appender.Screen.layout = Log::Log4perl::Layout::PatternLayout
+log4perl.appender.Screen.layout.ConversionPattern = %d{HH:mm:ss} %p [%r] %H : %F %L %c - %m%n
+                       ) );
+my $log = Log::Log4perl->get_logger("naw::lxd");
+$log->level($warn ? $DEBUG : $ERROR); # one of DEBUG, INFO, WARN, ERROR, FATAL
+
+use Net::Async::WebService::lxd;
+$Net::Async::WebService::lxd::log = $log;
+
 
 my %SSL = map  { $_ => $ENV{$_} }
           grep { $_ =~ /^SSL_/ }
@@ -37,7 +47,7 @@ my %SSL = map  { $_ => $ENV{$_} }
 %SSL = (
     SSL_cert_file   => "t/client.crt",
     SSL_key_file    => "t/client.key",
-    SSL_fingerprint => 'sha1$92:DD:63:F8:99:C4:5F:82:59:52:82:A9:09:C8:57:F0:67:56:B0:1B',
+    SSL_fingerprint => 'sha1$20:15:80:76:E0:A5:04:C6:A9:6A:BA:81:3D:25:91:67:C2:79:97:30',
 ) unless %SSL;
 
 #== tests ========================================================

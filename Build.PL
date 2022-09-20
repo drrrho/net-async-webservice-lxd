@@ -3,7 +3,7 @@ use warnings;
 use Module::Build;
 
 
-# $ENV{'PERL_MB_OPT'} = '--install-base=/usr'; # I could not make this work via the parameters below :/
+$ENV{'PERL_MB_OPT'} = '--install_path lib=/usr/share/perl5';
 $ENV{'DEB_BUILD_OPTIONS'}='nocheck';
 
 my $debian = Module::Build->subclass(
@@ -94,7 +94,7 @@ my $builder = $debian->new(
 	    'HTTP::Cookies'       => 0,
 	    'Log::Log4perl'       => 0,
 	    'Net::Async::HTTP'    => 0,
-
+	    'IO::Async::SSL'      => 0,
     },
     add_to_cleanup     => [ 'Net-Async-WebService-lxd-*' ],
 );

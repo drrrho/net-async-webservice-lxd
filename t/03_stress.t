@@ -18,6 +18,11 @@ unless ($warn) {
 
 use constant DONE => 1;
 
+unless ( $ENV{LXD_STRESS} ) {
+    plan skip_all => 'no LXD_STRESS defined in ENV';
+    done_testing; exit;
+}
+
 # $ENV{LXD_ENDPOINT} = 'https://192.168.3.50:8443';
 unless ( $ENV{LXD_ENDPOINT} ) {
     plan skip_all => 'no LXD_ENDPOINT defined in ENV';
@@ -70,6 +75,11 @@ my $lxd = Net::Async::WebService::lxd->new( loop      => $loop,
 					    %SSL,
 					    @PROJECT,
                                            );
+
+# just informal testing
+$lxd->_http->configure(user_agent => "My Client");
+$lxd->_http->configure( +headers => { One_More => "Key" } );
+
 eval {
     $lxd->create_project(
 	body => {
@@ -82,15 +92,160 @@ eval {
 	})->get;
 };
 
+if (DONE) {
+    my $AGENDA = q{lxd concurrent actions: };
 
+    eval {
+	$loop->watch_time( after => 5, code => sub {
+	    diag( "creating ddd" );
+	    $lxd->create_instance(
+		@PROJECT,
+		body => {
+		    name => "ddd$$",
+		    source => {
+			type => 'image',
+			mode => 'pull',
+			server => 'https://images.linuxcontainers.org',
+			protocol => 'simplestreams',
+			alias => 'alpine/edge',
+		    },
+		    profile => [ 'default' ],
+		    architecture => 'x86_64',
+		    config       => {},
+		} )->get;
+	    $lxd->instance_state( @PROJECT, name => "ddd$$",
+				  body => {
+				      action   => "start",
+				      force    => JSON::false,
+				      stateful => JSON::false,
+				      timeout  => 30,
+				  } )->get;
+			   } );
+	
+	$loop->watch_time( after => 5, code => sub {
+	    diag( "creating eee" );
+	    $lxd->create_instance(
+		@PROJECT,
+		body => {
+		    name => "eee$$",
+		    source => {
+			type => 'image',
+			mode => 'pull',
+			server => 'https://images.linuxcontainers.org',
+			protocol => 'simplestreams',
+			alias => 'alpine/edge',
+		    },
+		    profile => [ 'default' ],
+		    architecture => 'x86_64',
+		    config       => {},
+		} )->get;
+	    $lxd->instance_state( @PROJECT, name => "eee$$",
+				  body => {
+				      action   => "start",
+				      force    => JSON::false,
+				      stateful => JSON::false,
+				      timeout  => 30,
+				  } )->get;
+			   } );
 
+	$loop->watch_time( after => 30, code => sub { $loop->stop; } );
+
+	$loop->run;
+	diag( "loop stopped" );
+    }; if ($@) {
+	diag( $AGENDA."creating, got error $@" );
+    }
+
+#-- execute
+    eval {
+	$loop->watch_time( after => 5, code => sub {
+	    diag( "executing inside ddd" );
+	    my $r = $lxd->execute_in_instance(
+		@PROJECT,
+		name => "ddd$$",
+		body => {
+		    "command" => [ '/usr/bin/cal' ],
+			"wait-for-websocket" => JSON::false,
+			"interactive" => JSON::false,
+			"environment" => {
+			    "TERM" => "screen",
+				"HOME" => "/root",
+		    },
+			"width"  => 0,
+			"height" => 0,
+			"record-output" => JSON::true,
+			"user"   => 0,
+			"group"  => 0,
+			"cwd"    => "/tmp"
+		}
+		)->get;
+	    like($r->{stdout}, qr/Su Mo Tu/, $AGENDA.'execute stdout');
+	    is( $r->{stderr}, '', $AGENDA.'execute stderr');
+			   } );
+	
+	$loop->watch_time( after => 5, code => sub {
+	    diag( "executing inside eee" );
+	    my $r = $lxd->execute_in_instance(
+		@PROJECT,
+		name => "eee$$",
+		body => {
+		    "command" => [ '/usr/bin/cal' ],
+			"wait-for-websocket" => JSON::false,
+			"interactive" => JSON::false,
+			"environment" => {
+			    "TERM" => "screen",
+				"HOME" => "/root",
+		    },
+			"width"  => 0,
+			"height" => 0,
+			"record-output" => JSON::true,
+			"user"   => 0,
+			"group"  => 0,
+			"cwd"    => "/tmp"
+		}
+		)->get;
+	    like($r->{stdout}, qr/Su Mo Tu/, $AGENDA.'execute stdout');
+	    is( $r->{stderr}, '', $AGENDA.'execute stderr');
+			   } );
+
+	$loop->watch_time( after => 20, code => sub { diag "stopping loop " if $warn; 
+						      $loop->stop; } );
+
+	$loop->run;
+	diag( "loop stopped" );
+    }; if ($@) {
+	diag( $AGENDA."executing got error $@" );
+    }
+
+#-- cleanup
+    $lxd->instance_state( @PROJECT, name => "ddd$$",
+			  body => {
+			      action   => "stop",
+			      force    => JSON::false,
+			      stateful => JSON::false,
+			      timeout  => 30,
+			  } )->get;
+    $lxd->instance_state( @PROJECT, name => "eee$$",
+			  body => {
+			      action   => "stop",
+			      force    => JSON::false,
+			      stateful => JSON::false,
+			      timeout  => 30,
+			  } )->get;
+    is( $lxd->delete_instance(@PROJECT, name => "ddd$$")->get, 'success', $AGENDA.'deleted container');
+    is( $lxd->delete_instance(@PROJECT, name => "eee$$")->get, 'success', $AGENDA.'deleted container');
+
+    my @is = @{ $lxd->images( @PROJECT )->get };
+    map { $lxd->delete_image( @PROJECT, fingerprint => $_ )->get }
+    map { s{/1.0/images/}{}; $_ }
+    @is;
+}
 
 
 if (DONE) {
-    my $AGENDA = q{instances: };
+    my $AGENDA = q{lxd server collapses inflight: };
 
-#-- simple life cycle
-    my $f = $lxd->create_instance(
+    $lxd->create_instance(
 	@PROJECT,
 	body => {
 	    name => "ccc$$",
@@ -104,9 +259,70 @@ if (DONE) {
 	    profile => [ 'default' ],
 	    architecture => 'x86_64',
 	    config       => {},
-	} );
-    isa_ok( $f, 'Future', $AGENDA.'future creation' );
-    is( $f->get, 'success', $AGENDA.'created');
+	} )->get;
+    $lxd->instance_state( @PROJECT, name => "ccc$$",
+			  body => {
+			      action   => "start",
+			      force    => JSON::false,
+			      stateful => JSON::false,
+			      timeout  => 30,
+			  } )->get;
+    diag( $AGENDA.'container ccc$$ created and started' );
+#--
+    foreach my $i (0..9) { # execute
+	diag( $AGENDA."shutdown lxd now (".(10-$i)." requests left)..." );
+	eval {
+	    my $r = $lxd->execute_in_instance(
+		@PROJECT,
+		name => "ccc$$",
+		body => {
+		    "command" => [ '/usr/bin/cal' ],
+			"wait-for-websocket" => JSON::false,
+			"interactive" => JSON::false,
+			"environment" => {
+			    "TERM" => "screen",
+				"HOME" => "/root",
+		    },
+			"width"  => 0,
+			"height" => 0,
+			"record-output" => JSON::true,
+			"user"   => 0,
+			"group"  => 0,
+			"cwd"    => "/tmp"
+		}
+		)->get;
+	    like($r->{stdout}, qr/Su Mo Tu/, $AGENDA.'execute stdout');
+	    is( $r->{stderr}, '', $AGENDA.'execute stderr');
+	}; if ($@) {
+	    diag( $AGENDA."error detected ($@)" );
+	}
+	sleep 5;
+    }
+    diag( $AGENDA."start lxd now (30secs) ..." );    sleep 30;
+#-- cleanup
+    $lxd->instance_state( @PROJECT, name => "ccc$$",
+			  body => {
+			      action   => "stop",
+			      force    => JSON::false,
+			      stateful => JSON::false,
+			      timeout  => 30,
+			  } )->get;
+    is( $lxd->delete_instance(@PROJECT, name => "ccc$$")->get, 'success', $AGENDA.'deleted container');
+
+    my @is = @{ $lxd->images( @PROJECT )->get };
+    map { $lxd->delete_image( @PROJECT, fingerprint => $_ )->get }
+    map { s{/1.0/images/}{}; $_ }
+    @is;
+}
+
+eval {
+    $lxd->delete_project( name => $PROJECT[1] )->get;
+};
+
+done_testing;
+
+__END__
+
 #--
     my @is = @{ $lxd->images( @PROJECT )->get };
     ok((scalar @is) == 1, $AGENDA.'list 1 image');
@@ -490,10 +706,6 @@ if (DONE) {
     $lxd->delete_image( @PROJECT, fingerprint => $fi )->get;
 }
 
-
-eval {
-    $lxd->delete_project( name => $PROJECT[1] )->get;
-};
 
 done_testing;
 
