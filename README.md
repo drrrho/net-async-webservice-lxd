@@ -3692,6 +3692,13 @@ containers.
 
     Alternatively, you can try to find the server certificate and use `openssl` to derive a fingerprint of your choice.
 
+- How to add/modify specific HTTP modalities (proxy, connection pooling, ...)
+
+    The property `_http` holds the async HTTP client of class [Net::Async::HTTP](https://metacpan.org/pod/Net%3A%3AAsync%3A%3AHTTP). That way you can reconfigure it via
+
+        $lxd->_http->configure(user_agent => "My Client");
+        $lxd->_http->configure( +headers => { One_More => "Key" } );
+
 # ISSUES
 
 Open issues are probably best put onto [Github](https://github.com/drrrho/net-async-webservice-lxd)

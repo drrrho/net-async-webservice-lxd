@@ -5354,6 +5354,14 @@ It is a SHA256 hash, so you will have to prefix it with C<sha256$> (no blanks) w
 
 Alternatively, you can try to find the server certificate and use C<openssl> to derive a fingerprint of your choice.
 
+=item * How to add/modify specific HTTP modalities (proxy, connection pooling, ...)
+
+The property C<_http> holds the async HTTP client of class L<Net::Async::HTTP>. That way you can reconfigure it via
+
+   $lxd->_http->configure(user_agent => "My Client");
+   $lxd->_http->configure( +headers => { One_More => "Key" } );
+
+
 =back
 
 =head1 ISSUES
