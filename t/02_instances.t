@@ -107,6 +107,26 @@ if (DONE) {
 	} );
     isa_ok( $f, 'Future', $AGENDA.'future creation' );
     is( $f->get, 'success', $AGENDA.'created');
+
+#-- failed creation
+    throws_ok {
+	my $x = $lxd->create_instance(
+	    @PROJECT,
+	    body => {
+		name => "vvv$$",
+		source => {
+		    type => 'image',
+		    mode => 'pull',
+		    server => 'https://images.linuxcontainers.org',
+		    protocol => 'simplestreams',
+		    alias => 'xxx/xxx',  # DOES NOT EXIST, HOPEFULLY
+		},
+		profile => [ 'default' ],
+		architecture => 'x86_64',
+		config       => {},
+	    } )->get;
+#warn Dumper $x;
+    } qr/Failed getting remote/, $AGENDA.'failed creation';
 #--
     my @is = @{ $lxd->images( @PROJECT )->get };
     ok((scalar @is) == 1, $AGENDA.'list 1 image');
@@ -151,6 +171,57 @@ if (DONE) {
 				  stateful => JSON::false,
 				  timeout  => 30,
 			      } )->get;
+    }
+
+    if (1) { # execute, not running
+#diag( "execute, but not running" );
+	throws_ok {
+	    my $r = $lxd->execute_in_instance(
+	    @PROJECT,
+	    name => "ccc$$",
+	    body => {
+		"command" => [ '/usr/bin/cal' ],
+		"wait-for-websocket" => JSON::false,
+		"interactive" => JSON::false,
+		"environment" => {
+		    "TERM" => "screen",
+		    "HOME" => "/root",
+		},
+		"width"  => 0,
+		"height" => 0,
+		"record-output" => JSON::true,
+		"user"   => 0,
+		"group"  => 0,
+		"cwd"    => "/tmp"
+	    }
+	    )->get;
+#warn Dumper $r;
+	} qr{not running}, $AGENDA.'execute, not running';
+    }
+    if (1) { # execute, not existing
+#diag( "execute, but not existing" );
+	throws_ok {
+	    my $r = $lxd->execute_in_instance(
+	    @PROJECT,
+	    name => "vvv$$",
+	    body => {
+		"command" => [ '/usr/bin/cal' ],
+		"wait-for-websocket" => JSON::false,
+		"interactive" => JSON::false,
+		"environment" => {
+		    "TERM" => "screen",
+		    "HOME" => "/root",
+		},
+		"width"  => 0,
+		"height" => 0,
+		"record-output" => JSON::true,
+		"user"   => 0,
+		"group"  => 0,
+		"cwd"    => "/tmp"
+	    }
+	    )->get;
+#warn Dumper $r;
+	} qr{Instance not found}, $AGENDA.'execute, not existing';
     }
 
     if (1) {
